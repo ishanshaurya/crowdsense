@@ -27,7 +27,7 @@ Rule: each fact lives in one file. Others point to it by decision number (`#n`).
 
 ```
 adapters/    telegram, web chat
-core/        engine, decide, flow, store, demand, insights, clock, config   (outbound: phase 5)
+core/        engine, decide, flow, store, demand, insights, outbound, clock, config
 api/         webhook service, web chat routes
 dashboard/   Streamlit app
 migrations/  Alembic schema
@@ -37,7 +37,13 @@ notes/       per-phase build notes
 
 ## Status
 
-Phases 1 to 4 are built and tested (tags `phase-2` to `phase-4`). Phase 5 (outbound announcements) is next, then phase 6 (hardening). See `docs/plan.md`.
+Phases 1 to 5 are built and tested (tags `phase-2` to `phase-4`, `phase-5a`). Phase 6 (hardening) is next. See `docs/plan.md`.
+
+## Limits
+
+- **Self-selection bias.** Only fans who open the bot and finish the chat are counted. They are keener than the average fan, so demand is likely overstated.
+- **Stated intent is not purchase.** Budget and "would you go" are answers, not sales. Expect a gap between what fans say and what they buy.
+- **Simulated data.** About 20,000 of the fans are generated, and the dashboard defaults to that view. Only the ~10 real testers show in the Real view. Simulated numbers show the system at scale, not real demand.
 
 ## Run
 

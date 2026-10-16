@@ -41,11 +41,11 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 
 ## Phase 5: Outbound and end-to-end rehearsal
 
-- [ ] Choose a city with at least one real tester; the audience preview shows only eligible fans.
-- [ ] Press notify; the message arrives on the phone with the city filled in.
+- [x] Choose a city with at least one real tester; the audience preview shows only eligible fans. (2026-10-17: Delhi NCR, 1 real Telegram tester; web_sim fans in Pune and Kolkata not counted.)
+- [x] Press notify; the message arrives on the phone with the city filled in. (2026-10-17: requests for 17, 18 and 19 Oct all arrived; fan-out to sent takes up to about 70 s: 30 s sweep, 10 s message age, 30 s sweep.)
 - [ ] Press notify twice quickly; the phone receives it once.
-- [ ] Send `/stop`, notify again; no message arrives.
+- [x] Send `/stop`, notify again; no message arrives. (2026-10-17: after `/stop` the Delhi NCR count is 0, no new request was queued, no reply created; checked in the DB.)
 - [ ] Full rehearsal in order: tap link, chat, dashboard updates, notify, receive, stop. Time it.
 - [x] Open `<PUBLIC_URL>/chat` on a phone over mobile data through ngrok and finish the flow; only then share the link with an interviewer (#103, deferred from phase 3). (2026-10-17: done by the user from the phone; server log: 7 `/chat/message` posts, all 200, no errors; one new completed fan in the Real view. Mobile data itself is the user's word, not visible in the log.)
-- [ ] README states limits (self-selection bias, stated intent vs purchase, simulated data).
+- [x] README states limits (self-selection bias, stated intent vs purchase, simulated data). (2026-10-17: "Limits" section added.)
 - [ ] Architecture diagram is current.
