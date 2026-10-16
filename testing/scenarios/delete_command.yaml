@@ -15,4 +15,5 @@ final_db:
   identities: none
   sessions: none
   answers: none
-  events: {kept: true, user_id_scrubbed: true}
+  events: none
+  replies: none

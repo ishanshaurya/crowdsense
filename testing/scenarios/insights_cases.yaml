@@ -1,4 +1,4 @@
-# Insights cases. Venues come from decisions.md (venue table).
+# Insights cases. Venues come from docs/decisions.md (venue table).
 # People per group bucket: 1_->1, 2->2, 3_5->4, 6_plus->6. Only completed fans count (spec gap A4).
 # Assumptions A1 (attendance per city), A2 (tie -> lower band), A3 (Other counts in city), A5 (growth "new") are marked.
 
@@ -64,15 +64,6 @@ growth_badge:
     - {this_week: 119, prior_week: 100, badge: false}# +19%
     - {this_week: 5, prior_week: 0, badge: new}      # A5
     - {this_week: 0, prior_week: 0, badge: none}
-
-interest_does_not_filter:
-  decisions: [34, 35]
-  fans_a:
-    - {city: Pune, venue: Baner Greens, group_size: "2", interest: definitely, completed: true}
-    - {city: Pune, venue: Baner Greens, group_size: "2", interest: just_curious, completed: true}
-  expect:
-    city_attendance: {Pune: 4}                       # both count
-    same_result_if_interest_swapped: true
 
 empty_data:
   decisions: [31]

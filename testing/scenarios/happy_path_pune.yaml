@@ -1,6 +1,6 @@
 id: happy_path_pune
 description: new fan finishes the whole flow in Pune
-decisions: [3, 4, 11, 12, 20, 21, 22, 24, 25, 35, 36]
+decisions: [3, 4, 11, 12, 20, 21, 22, 24, 25, 36]
 steps:
   - send: {kind: start, source_tag: ig_story}
     expect: {step: consent, options: ["Count me in", "No thanks"], text_contains: "Get updates when Artist X plays near you"}
@@ -13,12 +13,10 @@ steps:
   - send: {kind: choice, value: "₹1,500–3,000"}
     expect: {step: group, options: ["1", "2", "3–5", "6+"]}
   - send: {kind: choice, value: "3–5"}
-    expect: {step: interest, options: ["Definitely", "Probably", "Just curious"]}
-  - send: {kind: choice, value: "Definitely"}
     expect: {step: email, options: ["Skip"]}
   - send: {kind: choice, value: "Skip"}
     expect: {step: done}
 final_db:
-  fans: {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: 3_5, interest: definitely, consent: true, is_simulated: false}
-  identities: {source_tag: ig_story, opted_out: false}
+  fans: {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: 3_5, is_simulated: false}
+  identities: {source_tag: ig_story, consent: true, opted_out: false}
   sessions: {step_id: done}

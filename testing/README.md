@@ -1,6 +1,6 @@
 # Testing
 
-Tests are the living spec. Each phase in `PLAN.md` has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. No code exists yet; this folder is written first and the build follows it.
+Tests are the living spec. Each phase in `docs/plan.md` has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. No code exists yet; this folder is written first and the build follows it.
 
 ## Folder map
 
@@ -60,7 +60,7 @@ final_db:                                       # state after the last step
 
 - Optional keys: `setup: {scenario: <id>, stop_before: <step>}` starts from the state another scenario leaves (or stops just before a step); `msg_id` on a send fixes the message id (for duplicate tests); `expect: {no_reply: true}`, `{error: true}` and `{duplicate: true}` check silent, rejected and deduplicated turns; `final_db` values of `none` mean the rows must not exist.
 - `expect` checks the step id and options, never exact wording (message drafts change, decision 38). Use `text_contains` only for the approved consent message.
-- Stored values use canonical codes so tests do not depend on labels: `budget_band` in `lt_1500 | 1500_3000 | 3000_6000 | gte_6000`, `group_size` in `1 | 2 | 3_5 | 6_plus`, `interest` in `definitely | probably | just_curious`.
+- Stored values use canonical codes so tests do not depend on labels: `budget_band` in `lt_1500 | 1500_3000 | 3000_6000 | gte_6000`, `group_size` in `1 | 2 | 3_5 | 6_plus`.
 - `insights_cases.yaml` is a separate format: given fans and venues, expected recommendations.
 
 ## Spec gaps found while drafting (close before the related tests are final)
@@ -72,7 +72,7 @@ All of A1 to A10 are accepted (decision 48); A1 to A4 were also confirmed indivi
 | A1 | Decision 31(c): is "expected attendance" for suggested venue measured per venue or per city? | Per city (all counted fans in the city). Per-venue demand is for ranking only | (confirmed, decision 49) |
 | A2 | Tie in the most common budget band | Pick the lower band (more fans can afford it) | (confirmed, decision 50) |
 | A3 | Fans who chose "Other / not listed" | Count in city attendance, city priority and price band; excluded from per-venue demand | (confirmed, decision 51) |
-| A4 | Which fans "count" | Fans who reached the done step (completed). Partial fans appear only in the funnel | (confirmed, decision 52) |
+| A4 | Which fans "count" | Fans who reached the done step at least once (`completed_at` set). Partial fans appear only in the funnel; a later edit does not uncount (decision 70) | (confirmed, decision 52) |
 | A5 | Growth badge when last week had 0 signups | Show "new" instead of a percentage; no division by zero |
 | A6 | Week boundary for growth | Rolling 7 days vs the 7 days before, by `created_at` |
 | A7 | Returning fan changes city | Venue is cleared and asked again, because venues belong to a city |

@@ -15,7 +15,7 @@ These checks prove the design, not just behaviour. They are automated (pre-commi
 | Q-07 | Complexity and size | ruff C901 max 10; files over 400 lines flagged for review | A function over the limit |
 | Q-08 | Hygiene | ruff T20 (no `print`), no TODO without an issue id, no commented-out code | Any hit |
 | Q-09 | Coverage | `core/` at least 90% line coverage; failing under the gate fails CI | Below the gate |
-| Q-10 | Spec consistency | Test parses `decisions.md`: the venue table equals the seeded `venues` rows; option lists in `flow.py` equal decisions 20 to 22; no step asks timing (decision 23); venue names contain no type words (arena, hall, club, stadium); every `@decision(n)` in tests exists in `decisions.md` | Any mismatch |
+| Q-10 | Spec consistency | Test parses `docs/decisions.md`: the venue table equals the seeded `venues` rows; option lists in `flow.py` equal decisions 20 to 22; no step asks timing (decision 23); venue names contain no type words (arena, hall, club, stadium); every `@decision(n)` in tests exists in `docs/decisions.md` | Any mismatch |
 
 ## Phase 2
 
@@ -62,5 +62,5 @@ Answer yes or no, with a note for any no. Use the `review` skill if wanted.
 - Could a new channel be added by writing one file plus a registry line?
 - Is there any business rule outside `core/`?
 - Does any module know about more than it needs to?
-- Is every decision in `decisions.md` visible in the code or tests?
+- Is every decision in `docs/decisions.md` visible in the code or tests?
 - Is anything built that no decision asked for?

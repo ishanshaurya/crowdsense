@@ -34,7 +34,7 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 - [ ] Open every view: top cities, price, group size, heatmap, funnel, weekly growth, source, recommendations.
 - [ ] Numbers on screen match a hand check on one city.
 - [ ] "Simulated data" badge appears when simulated data is shown.
-- [ ] Real vs simulated filter changes the numbers correctly.
+- [ ] Simulated / Real switch changes the numbers; Real shows only the test accounts.
 - [ ] Complete a new chat on your phone; after a refresh the dashboard shows the new fan.
 - [ ] Hero recommendation card reads well in plain language.
 - [ ] Jaipur and Indore show as growing.

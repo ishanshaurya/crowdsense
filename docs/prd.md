@@ -1,6 +1,6 @@
 # PRD: Crowdsense
 
-What we build and why. How: `ARCHITECTURE.md`. When: `PLAN.md`. Why each choice: `decisions.md`.
+What we build and why. How: `docs/architecture.md`. When: `docs/plan.md`. Why each choice: `docs/decisions.md`. Terms: `CONTEXT.md`. Review log: `docs/design-review.md`. Metrics: `docs/metrics.md`.
 
 ## 1. Problem
 
@@ -68,8 +68,7 @@ Fan clicks a link (story, bio, poster). The chat app opens. The bot asks:
 3. Venue in that city (or "Other / not listed")
 4. Ticket budget band
 5. Group size
-6. Interest level
-7. Email (optional)
+6. Email (optional)
 
 Fan commands: `/stop`, `/delete`, `/help`.
 
@@ -77,7 +76,7 @@ Returning fans can edit any answer.
 
 ### Bot: outbound
 
-- One "show announced in your city" message, sent from the dashboard.
+- One "show announced in your city" message, sent from a dashboard form: pick a city and a ticket-open date, see a preview and the recipient count, then confirm.
 - Goes only to fans who consented and did not opt out.
 
 ### Dashboard: insights
@@ -96,7 +95,7 @@ Returning fans can edit any answer.
 - Suggested price band
 - City priority, with a "growing" badge
 
-Rules: `decisions.md` #31 to #34, #49 to #52.
+Rules: `docs/decisions.md` #31 to #34, #49 to #52.
 
 ## 5. MVP scope
 
@@ -104,19 +103,19 @@ The MVP is a proof of concept for interviewers (#1).
 
 In scope:
 - Telegram as the only live channel (#5)
-- Web chat simulator as a second channel (#16)
-- Simulated artist and ~1,500 simulated fans, labelled "simulated" (#18, #40)
-- Real fans: builder plus a few testers
+- Web chat simulator as a second channel (#16); backup only, Telegram is the main channel (#83)
+- Simulated artist and ~20,000 simulated fans, labelled "simulated" (#18, #78)
+- Real fans: about 9 to 10 testers on their own Telegram accounts, shown separately from the simulated ones
 - Everything above in section 4
 
 Changed from the original idea:
 
-| Original | MVP | Why |
-|---|---|---|
-| WhatsApp bot | Telegram first, WhatsApp later | No Meta verification or templates needed (#5) |
-| Real artist | Simulated artist | Proof of concept (#18) |
-| Free-text venue area | Venue buttons per city | Clean data (#25) |
-| Show timing / preferred dates | Not asked | Removed (#23) |
+| Original                      | MVP                            | Why                                           |
+| ----------------------------- | ------------------------------ | --------------------------------------------- |
+| WhatsApp bot                  | Telegram first, WhatsApp later | No Meta verification or templates needed (#5) |
+| Real artist                   | Simulated artist               | Proof of concept (#18)                        |
+| Free-text venue area          | Venue buttons per city         | Clean data (#25)                              |
+| Show timing / preferred dates | Not asked                      | Removed (#23)                                 |
 
 Out of scope (later):
 - WhatsApp, Instagram, Discord (#7)
@@ -124,7 +123,6 @@ Out of scope (later):
 - Campaign conversion metrics (needs ticket sales data)
 - Many artists at once (hardening adds campaigns)
 - Merging one fan across channels (#37)
-- Using interest level in the numbers (#34)
 
 ## 6. Success
 
@@ -132,7 +130,7 @@ Out of scope (later):
 - The answer shows on the dashboard within seconds.
 - Each city gets a venue, price band and priority.
 - Outbound message reaches opted-in testers only.
-- Measured numbers meet the targets in `PLAN.md`.
+- After the MVP (phase 6): measured numbers meet the targets in `docs/plan.md`; results recorded in `docs/metrics.md`.
 
 ## 7. Known limits
 

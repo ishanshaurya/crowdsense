@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run mypy core
+      - run: uv run lint-imports
+      - run: uv run detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
+      - run: >-
+          uv run pytest -m "unit or component" --cov=core --cov-fail-under=90
+          --postgresql-host=localhost --postgresql-port=5432
+          --postgresql-user=postgres

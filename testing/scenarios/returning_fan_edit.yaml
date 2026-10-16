@@ -4,7 +4,7 @@ decisions: [12, 36]
 setup: {scenario: happy_path_pune}
 steps:
   - send: {kind: start}
-    expect: {step: edit_menu, options: ["City", "Venue", "Budget", "Group", "Interest", "All good"]}
+    expect: {step: edit_menu, options: ["City", "Venue", "Budget", "Group", "All good"]}
   - send: {kind: choice, value: "Budget"}
     expect: {step: budget}
   - send: {kind: choice, value: "₹3,000–6,000"}

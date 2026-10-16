@@ -1,6 +1,6 @@
 # Phase 6: Hardening
 
-Adds the layers deferred from phases 1 to 5: contract, property, load and resilience. All earlier tests stay green. Items come from `ARCHITECTURE.md` §11; tools and NFR targets from `PLAN.md`. Targets are proposed; set them after measuring.
+Adds the layers deferred from phases 1 to 5: contract, property, load and resilience. All earlier tests stay green. Items come from `docs/architecture.md` §10; tools from `docs/plan.md`; targets from `docs/metrics.md`. Targets are proposed; set them after measuring.
 
 ## Build
 
@@ -24,7 +24,7 @@ Inbox-first idempotent webhook with row locking, campaigns, outbox for outbound,
 | P6-R03 | `fans` always equals the latest values in `answers` (and rebuilds identically from `answers`) |
 | P6-R04 | An opted-out or simulated fan never receives an outbound message |
 | P6-R05 | `decide` is deterministic and performs no I/O |
-| P6-R06 | Insights output is invariant to row order and to interest values |
+| P6-R06 | Insights output is invariant to row order |
 | P6-R07 | Suggested venue capacity is never below attendance ÷ 0.8 unless the largest venue is chosen |
 
 ## Component tests for new architecture items

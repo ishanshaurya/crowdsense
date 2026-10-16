@@ -3,6 +3,7 @@ name = "crowdsense"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.0",
     "fastapi>=0.143.2",
     "httpx>=0.28.1",
     "pandas>=3.0.6",
@@ -15,8 +16,71 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "detect-secrets>=1.5.0",
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
     "pytest-postgresql>=9.1.1",
+    "pyyaml>=6.0.3",
     "ruff>=0.17.1",
+    "types-pyyaml>=6.0.12.20260906",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C90", "T20", "ERA", "SIM", "RUF"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["RUF001", "RUF002", "RUF003"]
+"core/**" = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["core"]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "unit: no I/O",
+    "component: engine + store, on the in-memory fake and on Postgres",
+    "decision(*numbers): decisions.md numbers the test proves",
+]
+
+[tool.coverage.run]
+source = ["core"]
+branch = true
+
+[tool.importlinter]
+root_packages = ["core", "adapters", "api", "dashboard"]
+
+[[tool.importlinter.contracts]]
+name = "core imports nothing from adapters, api, dashboard"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["adapters", "api", "dashboard"]
+
+[[tool.importlinter.contracts]]
+name = "adapters import nothing from api, dashboard"
+type = "forbidden"
+source_modules = ["adapters"]
+forbidden_modules = ["api", "dashboard"]
+
+[[tool.importlinter.contracts]]
+name = "dashboard uses only the store and insights from core"
+type = "forbidden"
+source_modules = ["dashboard"]
+forbidden_modules = ["core.engine", "core.flow", "core.decide", "adapters", "api"]
