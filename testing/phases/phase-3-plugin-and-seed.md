@@ -5,7 +5,7 @@ All phase 1 and 2 tests must still pass. The point of this phase: adding a chann
 ## Build
 
 1. `adapters/web_sim.py`: a small web chat on the same engine.
-2. Seed script that drives the engine through the web sim to create about 1,500 simulated fans (decision 40).
+2. Seed script that runs the engine in memory with `simulated=True` to create about 20,000 simulated fans, then bulk-copies them to Postgres (decisions 78, 82, 102).
 3. Parity check that proves `core/` and the schema did not change in this phase.
 
 ## Unit tests

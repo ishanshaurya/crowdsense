@@ -5,7 +5,7 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | Decision | Behaviour | Tests |
 |---|---|---|
 | 3 | Link carries a source tag | P1-C04, P2-U01, P2-U02, P4-U07 |
-| 4 | Channel is a plugin; core is channel-free | P1-C01, P2-C01, P3-C01, P3-C02, P3-C03, P3-U01, Q-05, Q-11, Q-15, P6-K01 |
+| 4 | Channel is a plugin; core is channel-free | P1-C01, P2-C01, P3-C01, P3-C02, P3-C03, P3-U01, P3-U02, Q-05, Q-11, Q-15, P6-K01 |
 | 5 | Telegram first | P2-U01 to U10, P2-C01 to C06 |
 | 11 | Fan separate from identity | P1-C01, P1-C03 |
 | 12 | Answers history plus snapshot | P1-C01, P1-C05, P1-C06, P6-R03, P6-C06 |
@@ -38,6 +38,7 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 55 | One transaction per turn | P1-S02, P1-S03, P1-S05 |
 | 56 | Clock seam | P1-S06 |
 | 57 | Demand module, SQL aggregates | P4-C01, P4-U08 |
+| 62 | Reset wipes simulated fans and reseeds | P3-C06 |
 | 70 | Counted from first completion | P1-U31, P1-U32 |
 | 71 | Engine error returns 200 + one apology | P2-C04 |
 | 72 | Resend sweeper | P1-S07, P2-C07, P2-C08, P5-C02 |
@@ -51,6 +52,7 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 82 | Engine `simulated=True` | P1-C14 |
 | 84 | Funnel by furthest step | P1-U33, P1-C07, P4-U05 |
 | 85 | Growth and audience use counted fans | P1-U26, P4-U06, P5-U01 |
+| 87 | Done text depends on push capability | P3-U02, P3-C02 |
 | 88 | Identity lock for new fans | P1-S02, P1-S08 |
 | 90 | Telegram dedupe on `update_id` | P2-U09, P2-U11, P2-C03 |
 | 91 | Stale taps ignored | P1-U34, P2-U11, P2-C09, P2-C10 |
@@ -58,10 +60,15 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 93 | 429 and 403 handling | P2-C12, P2-C13 |
 | 94 | Interest question removed | P1-U12 |
 | 95 | Input caps: text 1,000 chars, source tag pattern, DB length limits | P2-U12, P2-C14, P2-C15, P2-C16 |
+| 99 | Web chat rate limit per IP; X-Forwarded-For trusted only from the local ngrok agent, last entry | web chat 429 test, client_ip and limiter unit tests |
+| 100 | Web chat replies marked sent after the response; stale unsent ones expired after 10 min | expiry and sweeper tests in `test_web_chat.py` |
+| 101 | Plugin cost: allowed paths for a new channel; core and migrations frozen | P3-C03, Q-15 |
+| 102 | Seeded fans on channel `seed`, replies never copied, no `/delete` | P3-C04, P3-C05 |
+| 103 | Interviewer gets the ngrok `/chat` link; phone check before sharing | manual checklist, Phase 5 |
 | 60 | Password gate; emails hidden by default | P4-U11, P6-C08 |
 
 ## Gaps to watch
 
 - Decisions 38 (message wording) and 29 (dev only hosting) have no tests: wording is refined by hand (manual checklist), hosting is not code.
 - Spec gaps A1 to A10 are confirmed (decision 48).
-- Decisions 62, 83 and 87 have no automated test yet; cover them in the manual checklist.
+- Decision 83 (no stable web chat fan id) has no automated test; it is a known limit. 62 (reset) is covered by P3-C06 and 87 (Done text by channel) by P3-C02 and the web chat Done test.

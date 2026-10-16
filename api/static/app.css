@@ -1,0 +1,16 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto; max-width: 560px; min-height: 100vh; display: flex; flex-direction: column;
+  font: 16px/1.4 system-ui, sans-serif; background: #f4f4f6; color: #1c1c1e;
+}
+header { padding: 12px 16px; font-weight: 600; background: #fff; border-bottom: 1px solid #ddd; }
+#log { flex: 1; padding: 12px 16px; overflow-y: auto; }
+.bubble { max-width: 85%; margin: 6px 0; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bot { background: #fff; border: 1px solid #e2e2e6; }
+.fan { margin-left: auto; background: #2f6fed; color: #fff; }
+.system { margin: 6px auto; background: none; color: #8a1c1c; font-size: 14px; text-align: center; }
+#buttons { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 8px; }
+#buttons button { padding: 8px 14px; border: 1px solid #2f6fed; border-radius: 18px; background: #fff; color: #2f6fed; font: inherit; }
+#compose { display: flex; gap: 8px; padding: 10px 16px 16px; background: #fff; border-top: 1px solid #ddd; }
+#compose input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid #ccc; border-radius: 18px; font: inherit; }
+#compose button { padding: 8px 16px; border: 0; border-radius: 18px; background: #2f6fed; color: #fff; font: inherit; }

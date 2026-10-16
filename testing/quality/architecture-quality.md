@@ -30,7 +30,7 @@ These checks prove the design, not just behaviour. They are automated (pre-commi
 
 | Id | Check | How | Fails when |
 |---|---|---|---|
-| Q-15 | Plugin cost | Adding the web sim touches only: one new adapter file, one registry line, tests. A CI check lists changed paths for the phase | Any change in `core/`, `migrations/` |
+| Q-15 | Plugin cost | Adding the web sim touches only the paths allowed by #101: one adapter file, its routes in `api/`, one wiring line, scripts, tests, docs. A test and a CI step list changed paths since tag `phase-2` | Any change in `core/`, `migrations/` |
 | Q-16 | Content rules | Scan of user-facing strings and seeds: no timing question, no venue type words, consent text matches the approved wording | A rule is broken |
 
 ## Phase 4

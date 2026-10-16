@@ -15,8 +15,8 @@ Use this for the demo and interview questions on load, scale and bot quality.
 | Real fans (testers on their own Telegram accounts) | ~9 to 10                              | #73            |
 | Cities                                             | 10                                    | #20            |
 | Venues                                             | 14 (2,000 to 30,000 seats)            | #24            |
-| Answer rows from the seed                          | ~140,000 (about 7 per fan)            | #78            |
-| Database size with the seed                        | ~60 to 100 MB of the 500 MB free tier | #78            |
+| Answer rows from the seed                          | 76,800 measured (3.8 per fan; was estimated at 7) | #78   |
+| Database size with the seed                        | 63 MB measured (events 38 MB, answers 10 MB) of the 500 MB free tier | #78 |
 | Dashboard scale target                             | 100,000 fans, 1,000,000 answers       | `docs/plan.md` |
 
 ## 2. What each proof shows
@@ -45,7 +45,7 @@ Why the seed is not a load test: it runs the engine in memory and bulk-copies ro
 | Dashboard query p95 at 100k fans | < 1 s                                         | Same, larger seed                         | `EXPLAIN ANALYZE` | 6     | —      |
 | Launch spike                     | 50 msg/s, no errors, recovers in seconds      | Spike run                                 | Locust            | 6     | —      |
 | Soak                             | 10 msg/s for ~30 min, memory and latency flat | Soak run                                  | Locust            | 6     | —      |
-| Seed run time (20k fans)         | Measure and report                            | Time the seed command                     | stopwatch         | 3     | —      |
+| Seed run time (20k fans)         | Measure and report                            | Time the seed command                     | stopwatch         | 3     | 6.4 s local (engine 4.9 s, COPY 1.4 s); `--reset` + reseed 7.1 s |
 | New fan visible on dashboard     | ≤ 10 s                                        | Tap in Telegram, watch dashboard          | manual            | 4     | —      |
 
 Report our time, Telegram API time and ngrok time separately, so the numbers are honest.
@@ -76,7 +76,7 @@ Derived from the targets, not measured yet:
 | Duplicate replies                    | Rare; only crash between send and mark (at-least-once) | Chaos test             | 6     | —      |
 | Engine errors shown to fan           | One apology, no retry storm                            | `P2-C04` (#71)         | 2     | Pass, both backends |
 | Opted-out fans messaged              | 0                                                      | `P5-C05`               | 5     | —      |
-| Simulated fans messaged              | 0                                                      | `P3-C05`               | 3     | —      |
+| Simulated fans messaged              | 0                                                      | `P3-C05`               | 3     | 0: no seeded replies stored, nothing claimable (#102) |
 | `/delete` leaves fan data            | 0 rows                                                 | `P1-C07` (#81)         | 1     | —      |
 | Coverage on `core/`                  | ≥ 85%                                                  | CI                     | 1     | 98.5% (phase 2) |
 

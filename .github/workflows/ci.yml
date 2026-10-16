@@ -24,6 +24,13 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags phase-2/phase-3 for the frozen-core check (P3-C03)
+      - name: core and migrations unchanged since phase-2 (P3-C03, Q-15)
+        run: |
+          end=$(git tag --list phase-3)
+          git diff --stat phase-2 $end -- core migrations
+          git diff --quiet phase-2 $end -- core migrations
       - uses: astral-sh/setup-uv@v6
       - run: uv lock --check
       - run: uv sync --locked

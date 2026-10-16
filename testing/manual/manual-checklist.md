@@ -24,10 +24,10 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 
 ## Phase 3: Web sim and seed
 
-- [ ] Chat in the browser; same questions and same rows as Telegram.
-- [ ] Run the seed; about 1,500 simulated fans exist, all flagged simulated.
-- [ ] Spot-check 5 seeded fans in the DB: values valid, venue belongs to the city.
-- [ ] Confirm no seeded fan has an outbound message.
+- [x] Chat in the browser; same questions and same rows as Telegram. (2026-10-16: fan 20004, web_sim, real, completed, 8 replies sent)
+- [x] Run the seed; about 20,000 simulated fans exist, all flagged simulated (#78). (Supabase 2026-10-16: 20,000, copy 19.8 s, 71 MB)
+- [x] Spot-check 5 seeded fans in the DB: values valid, venue belongs to the city.
+- [x] Confirm no seeded fan has an outbound message. (0 replies)
 
 ## Phase 4: Dashboard
 
@@ -46,5 +46,6 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 - [ ] Press notify twice quickly; the phone receives it once.
 - [ ] Send `/stop`, notify again; no message arrives.
 - [ ] Full rehearsal in order: tap link, chat, dashboard updates, notify, receive, stop. Time it.
+- [ ] Open `<PUBLIC_URL>/chat` on a phone over mobile data through ngrok and finish the flow; only then share the link with an interviewer (#103, deferred from phase 3).
 - [ ] README states limits (self-selection bias, stated intent vs purchase, simulated data).
 - [ ] Architecture diagram is current.

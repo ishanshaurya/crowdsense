@@ -20,6 +20,7 @@ from fastapi import BackgroundTasks, FastAPI, Request, Response
 
 from adapters.base import Adapter, Tap
 from adapters.telegram import TelegramAdapter
+from api.chat import mount_chat
 from api.logs import configure_logging
 from api.sender import Pacer, Sender
 from api.sweeper import Sweeper
@@ -148,4 +149,5 @@ def build_app() -> FastAPI:
     sender = Sender(engine, Pacer())
     webhook = Webhook(engine, store, adapters, clock, sender)
     sweeper = Sweeper(store, engine, sender, adapters, clock)
-    return create_app(webhook, sweeper=sweeper, on_shutdown=(client.aclose, store.close))
+    app = create_app(webhook, sweeper=sweeper, on_shutdown=(client.aclose, store.close))
+    return mount_chat(app, engine, store, clock)  # web chat at /chat (#77), not in `adapters`

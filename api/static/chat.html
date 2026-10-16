@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crowdsense chat</title>
+  <link rel="stylesheet" href="/chat/app.css">
+  <script src="/chat/app.js" defer></script>
+</head>
+<body>
+  <header>Crowdsense</header>
+  <main id="log" aria-live="polite"></main>
+  <div id="buttons"></div>
+  <form id="compose" autocomplete="off">
+    <input id="text" name="text" maxlength="1000" placeholder="Type a message" aria-label="Message">
+    <button type="submit">Send</button>
+  </form>
+</body>
+</html>
