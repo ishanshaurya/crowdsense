@@ -1,6 +1,5 @@
 """Seed on real Postgres: P3-C04 to P3-C07, reset (#62), host guard. Postgres only: COPY."""
 
-import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,29 +11,12 @@ from core.catalog import CITIES, VENUES
 from core.clock import ScriptedClock
 from core.engine import Engine
 from core.store_postgres import PostgresStore
-from scripts.seed import check_rows, copy_rows, guard_host, rows_of, run_engine
-from scripts.seed_plan import CHANNEL, plan_fans
+from scripts.seed import check_rows, copy_rows, guard_host
+from scripts.seed_plan import CHANNEL
 from tests.component.helpers import flow, talk
 from tests.support import ARTIST, NOW, decision
 
 Rows = dict[str, list[Any]]
-
-
-def _rows(count: int) -> Rows:
-    async def go() -> Rows:
-        return await rows_of(await run_engine(plan_fans(count, 42, datetime.now(UTC))))
-
-    return asyncio.run(go())
-
-
-@pytest.fixture(scope="session")
-def full_rows() -> Rows:
-    return _rows(20_000)
-
-
-@pytest.fixture(scope="session")
-def small_rows() -> Rows:
-    return _rows(1_000)
 
 
 def seed(url: str, rows: Rows, *, reset: bool = False) -> int:

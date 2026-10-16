@@ -15,7 +15,7 @@ Read in this order:
 | `docs/message-script.md` | What the bot says; messaging error handling      |
 | `docs/plan.md`           | Order of work (phases 0–6)                       |
 | `docs/metrics.md`        | Load, scale and bot-strength targets and results |
-| `docs/decisions.md`      | Every decision, numbered (#1–#103)                |
+| `docs/decisions.md`      | Every decision, numbered (#1–#108)                |
 | `docs/design-review.md`  | Why each decision was made; interview Q&A        |
 | `CONTEXT.md`             | Glossary                                         |
 | `testing/`               | Test plan per phase, scenarios, traceability     |

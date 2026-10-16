@@ -24,22 +24,24 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 27 | "Other / not listed" note | P1-U05, P1-U29, P4-U04 |
 | 28 | Streamlit dashboard | P4-C03, P4-C05 |
 | 30 | Two services, DB as bridge | P4-C04, Q-05, Q-17 |
-| 31 | Venue demand, attendance, suggested venue, city priority, growth badge | P1-U20 to U27, U29, U30, P4-U01, P4-U06, P4-U08 |
+| 31 | Venue demand, attendance, suggested venue, city priority, growth badge | P1-U20 to U27, U29, U30, P4-U01, P4-U06, P4-U08, P4-U10 |
 | 32 | Price band is the most common band | P1-U24, P4-U02 |
 | 33 | Group to people mapping | P1-U07, P1-U20 |
 | 36 | Consent, `/stop`, `/delete`, `/help` | P1-U01 to U03, U09 to U11, P1-C07, P1-C08, P2-U05, P5-U02, P5-C05, P6-R04, Q-16 |
 | 37 | Each channel identity is its own fan | P1-C03 |
 | 39 | `venues` table | P1-C09, P1-C12, Q-10 |
 | 40 | About 1,500 seeded fans | P3-U03, P3-U04, P3-C04, P3-C07 |
-| 41 | Pure core, store interface, insights module | P1-U13, P1-C10, P1-C11, Q-02, Q-06, P6-R05 |
+| 41 | Pure core, store interface, insights module | P1-U13, P1-C10, P1-C11, Q-02, Q-06, P6-R05, P4-C02 |
 | 42 | Hardening and measured results | Phase 6 tests, Q-21 to Q-24 |
 | 47 | Replies logged per turn | P1-S04, P1-S05 |
+| 51 | "Other" counts for city, not venue | P1-U29, P1-U32, P4-U04 |
+| 52 | Only counted fans in numbers | P1-U31, P4-U01 to U07 |
 | 54 | Store contract suite from phase 1 | P1-S01 to S07 |
 | 55 | One transaction per turn | P1-S02, P1-S03, P1-S05 |
 | 56 | Clock seam | P1-S06 |
-| 57 | Demand module, SQL aggregates | P4-C01, P4-U08 |
+| 57 | Demand module, SQL aggregates | P4-U01 to U10, P4-C01, P4-C07, Q-17 |
 | 62 | Reset wipes simulated fans and reseeds | P3-C06 |
-| 70 | Counted from first completion | P1-U31, P1-U32 |
+| 70 | Counted from first completion | P1-U31, P1-U32, P4-U05 |
 | 71 | Engine error returns 200 + one apology | P2-C04 |
 | 72 | Resend sweeper | P1-S07, P2-C07, P2-C08, P5-C02 |
 | 73 | Simulated / Real switch | P4-U09 |
@@ -65,6 +67,11 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 101 | Plugin cost: allowed paths for a new channel; core and migrations frozen | P3-C03, Q-15 |
 | 102 | Seeded fans on channel `seed`, replies never copied, no `/delete` | P3-C04, P3-C05 |
 | 103 | Interviewer gets the ngrok `/chat` link; phone check before sharing | manual checklist, Phase 5 |
+| 104 | Funnel per view; Real adds `funnel_counts` | P4-U05 |
+| 105 | Dashboard role by script, SELECT only; dashboard env names | P4-C02, Q-18, Q-04 |
+| 106 | Live refresh: fragment 5 s, one snapshot per refresh | P4-C03, P4-C05 |
+| 107 | Banner: view, counted and started fans | P4-U09 |
+| 108 | Supabase API roles closed out of our tables | `test_lock_public_api.py` |
 | 60 | Password gate; emails hidden by default | P4-U11, P6-C08 |
 
 ## Gaps to watch

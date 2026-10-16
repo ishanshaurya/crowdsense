@@ -6,6 +6,7 @@ Error messages name the variable, never its value.
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 DEFAULT_ARTIST_NAME = "Artist X"
 
@@ -56,3 +57,30 @@ def load_telegram_settings(environ: Mapping[str, str]) -> TelegramSettings:
     if not re.fullmatch(r"https://[A-Za-z0-9.-]+(:\d+)?", public_url):
         raise ConfigError("PUBLIC_URL must be an https:// origin with no path")
     return TelegramSettings(bot_token=token, webhook_secret=secret, public_url=public_url)
+
+
+DASHBOARD_ROLE = "crowdsense_dashboard"  # #105; on the Supabase pooler: crowdsense_dashboard.<ref>
+MIN_DASHBOARD_PASSWORD = 12
+
+
+@dataclass(frozen=True)
+class DashboardSettings:
+    """Dashboard only (#60, #105). Both values are secrets, so neither reaches `repr` or a log."""
+
+    database_url: str = field(repr=False)
+    password: str = field(repr=False)
+
+
+def load_dashboard_settings(environ: Mapping[str, str]) -> DashboardSettings:
+    url = environ.get("DASHBOARD_DATABASE_URL", "").strip()
+    if not url.startswith(("postgresql://", "postgres://")):
+        raise ConfigError("DASHBOARD_DATABASE_URL must be set to a postgresql:// URL")
+    user = urlsplit(url).username or ""
+    if user.split(".")[0] != DASHBOARD_ROLE:
+        raise ConfigError(f"DASHBOARD_DATABASE_URL must log in as the {DASHBOARD_ROLE} role")
+    password = environ.get("DASHBOARD_PASSWORD", "")
+    if len(password) < MIN_DASHBOARD_PASSWORD:
+        raise ConfigError(
+            f"DASHBOARD_PASSWORD must be at least {MIN_DASHBOARD_PASSWORD} characters"
+        )
+    return DashboardSettings(database_url=url, password=password)

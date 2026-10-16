@@ -1,0 +1,16 @@
+# Dashboard (#28): served on this laptop only; no usage stats sent anywhere.
+[server]
+address = "localhost"
+port = 8501
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = "none"
+
+[theme]
+base = "light"
+primaryColor = "#7c3aed"

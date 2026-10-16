@@ -10,7 +10,7 @@ These checks prove the design, not just behaviour. They are automated (pre-commi
 | Q-02 | Types | mypy or pyright, strict on `core/` | Any type error in `core/` |
 | Q-03 | No secrets in the repo | gitleaks or detect-secrets in pre-commit and CI; `.env` ignored by git | A key, token or connection string is found |
 | Q-04 | Config hygiene | Test that every env var read in code is listed in `.env.example`, and that `.env.example` holds placeholders only | An undeclared var, or a real-looking value |
-| Q-05 | Dependency direction | import-linter contracts: `core` imports nothing from `adapters`, `api`, `dashboard`; adapters do not import each other, `api` or `dashboard`; `dashboard` imports only the store and insights from `core` | Any forbidden import |
+| Q-05 | Dependency direction | import-linter contracts: `core` imports nothing from `adapters`, `api`, `dashboard`; adapters do not import each other, `api` or `dashboard`; `dashboard` imports only the store, demand, insights, config and catalog from `core` (direct imports; indirect ones allowed) | Any forbidden import |
 | Q-06 | Pure core | Test runs `decide` with sockets, file access, clock and randomness patched to raise; no `datetime.now`, `random` or `uuid` calls inside `decide` | Any I/O or hidden time/randomness |
 | Q-07 | Complexity and size | ruff C901 max 10; files over 400 lines flagged for review | A function over the limit |
 | Q-08 | Hygiene | ruff T20 (no `print`), no TODO without an issue id, no commented-out code | Any hit |
