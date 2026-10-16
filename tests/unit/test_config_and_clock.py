@@ -19,6 +19,18 @@ def test_settings_are_validated_at_startup() -> None:
             load_settings(bad)
 
 
+@decision(63)
+def test_settings_repr_never_shows_the_database_url() -> None:
+    url = (
+        "postgresql://owner:hunter2-secret@db.example.com:5432/postgres"  # pragma: allowlist secret
+    )
+    settings = load_settings({"DATABASE_URL": url})
+    assert url not in repr(settings) and "hunter2" not in repr(settings)
+    assert url not in f"{settings}" and "hunter2" not in str(settings)
+    assert settings.database_url == url  # still readable by the code that connects
+    assert "Artist X" in repr(settings)
+
+
 @decision(56)
 def test_scripted_clock_moves_only_when_told() -> None:
     clock = ScriptedClock(NOW)

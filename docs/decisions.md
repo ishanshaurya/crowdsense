@@ -40,7 +40,9 @@ Channel options: `docs/architecture.md` §8. Council input: `docs/design-review.
 
 ### Architecture and stack
 
+- **#5** Telegram is the first and only live channel; the web chat (#16, #76) is the backup · _(user, restored)_
 - **#6** Effort goes mainly into backend logic and database architecture · _(user)_
+- **#7** WhatsApp, Instagram and Discord adapters are parked for later (section 4) · _(user, restored)_
 - **#8** Repo structure: `adapters/`, `core/{engine,flow,store}`, `api/webhooks`, `dashboard/` · _(user)_
 - **#26** Database: Supabase (hosted Postgres) is the primary and only database for now · _(user)_
 - **#28** Dashboard: Streamlit (Python, reads the DB directly; read path refined to `core/demand.py` by #57) · _(user)_
@@ -133,6 +135,13 @@ Channel options: `docs/architecture.md` §8. Council input: `docs/design-review.
 - **#106** Live refresh: a Streamlit fragment reruns the data area every 5 s; each refresh runs every query in one `READ ONLY` `REPEATABLE READ` transaction on one pooled connection (pool max 2), so the banner and views share one snapshot. Results are cached for 4 s per view, so many open tabs cost about one batch per 5 s. A new fan appears within about 10 s (#28) · _(user)_
 - **#107** The banner shows the view, counted fans (#52) and started fans: "Simulated data · 17,000 counted fans (20,000 started)". Refines #73 · _(user)_
 - **#108** Supabase's API roles `anon` and `authenticated` get no privileges on our tables: `scripts/lock_public_api.py` revokes them on every table, sequence and function in `public` and in the owner's default privileges (future tables stay closed), then fails if any privilege is still open. Reason: Supabase grants them everything with row-level security off, so the public anon key could read, edit or delete fan data through the REST API. A script, not a migration, because the roles exist only on Supabase. The dashboard role (#105) and the owner are unaffected · _(user)_
+- **#109** An announcement request holds only `city` (CHECK: a catalog city) and `event_date`. The dashboard role gets `INSERT (city, event_date)` on `announcement_requests` plus the RLS policy `dashboard_insert` (INSERT, that role only); no SELECT, UPDATE or DELETE. The webhook service builds the text (message-script #15) and the audience, so someone with the dashboard password or DB URL can only trigger the fixed message. Refines #80, #105 · _(user)_
+- **#110** The audience is written once, as the SQL function `announcement_audience(city)`: counted (#85), consent yes, not opted out, not simulated, channel `telegram` only (an allowlist, so `web_sim` and `seed` are out, #76, #102). The dashboard gets only `announcement_audience_count(city)` (`SECURITY DEFINER`), never the rows. Both functions have EXECUTE revoked from PUBLIC. The in-memory store mirrors the rule and the contract suite runs both. Refines #59, #85 · _(user)_
+- **#111** Fan-out goes into `replies`, so the existing sweeper sends it (#72). In one transaction: claim the oldest pending request (`FOR UPDATE SKIP LOCKED`), insert an outbound event and a priority-1 reply per audience fan (unique per request and fan, `ON CONFLICT DO NOTHING`), mark the request `fanned_out` with the recipient count. Chat replies are priority 0 and claimed first. Delivery stays at-least-once: a crash after a send but before `mark_sent` sends that one message again. Refines #59, #80 · _(user)_
+- **#112** One announcement per city and date: `UNIQUE (city, event_date)`. The dashboard shows "Already queued" on a duplicate and locks the button once clicked in that session. Resending a corrected announcement for the same show is not allowed, by choice. This replaces the idempotency key in P5-U06. Refines #41, #75 · _(user)_
+- **#113** No `current_date` CHECK on `event_date` (Postgres never re-checks it as days pass). The date picker starts at today (IST), and the fan-out marks a past-date request `fanned_out` with 0 recipients and logs it. Refines #75 · _(user)_
+- **#114** `/stop` drops the fan's unsent replies, as a 403 already did (#93), so a queued announcement never reaches a fan who opted out after the fan-out. Refines #36 · _(user)_
+- **#115** Migration 0004 closes its own objects: it revokes the new table and functions from `anon` and `authenticated` (when those roles exist) and enables RLS, instead of relying on someone re-running `scripts/lock_public_api.py`, whose check now also covers `announcement_requests`. Refines #108 · _(user)_
 
 ---
 
@@ -234,7 +243,7 @@ Streamlit now. The dashboard only reads the database, so Next.js (or another too
 
 ## 5. Research questions
 
-To research with Claude web. Sections 5.1 and 5.2 are for the later WhatsApp adapter, not a blocker. Sections 5.3 to 5.5 feed phase 0 of `docs/plan.md`. Items already settled point to their decision.
+Questions that were prepared for outside research. Sections 5.1, 5.3 and 5.4 are settled by the decisions they point to. Sections 5.2, 5.5 and 5.6 were not pursued: 5.2 is for a WhatsApp adapter that is not in the plan (`docs/plan.md`, "Later").
 
 **Context to paste first:** fan-demand-intelligence MVP for a simulated big Indian artist. Fans click a link (story, bio) that opens Telegram first (WhatsApp later). A bot collects city, venue, ticket budget, group size, contact. A dashboard shows demand to the artist. Audience: interviewers judging a POC and working MVP. India-based builder.
 
@@ -245,7 +254,7 @@ To research with Claude web. Sections 5.1 and 5.2 are for the later WhatsApp ada
 3. Where do Indian concert-going fans mostly hear from artists and chat (WhatsApp, Telegram, Instagram DMs)? Any data?
 4. Can one conversation engine serve both channels cleanly? What is the minimum adapter design? → #4, #10
 
-### 5.2 WhatsApp Cloud API specifics — open, for the later adapter
+### 5.2 WhatsApp Cloud API specifics — not pursued (WhatsApp is not in the plan)
 
 1. 2026 limits of the free test number: recipient cap, how recipients are added, token expiry, how to get a permanent system-user token.
 2. Can fans who are not whitelisted message the test number through a wa.me link? If not, what is the cheapest path to let real fans in?
@@ -257,13 +266,13 @@ To research with Claude web. Sections 5.1 and 5.2 are for the later WhatsApp ada
 8. Interactive messages: buttons and lists, limits on counts and lengths.
 9. Account ownership: personal vs business Meta account, how to avoid a messy number migration later.
 
-### 5.3 Telegram specifics — open, phase 0
+### 5.3 Telegram specifics — settled by #66, #69, #90 to #93; built in phase 2
 
 1. Bot setup via BotFather, deep link `start` parameter for source tags, webhook vs long polling.
 2. Inline keyboards for buttons, rate limits, how to message users later (they must start the bot first).
 3. Privacy: what user data Telegram gives the bot (no phone number by default; how to request contact).
 
-### 5.4 Tech stack — mostly settled
+### 5.4 Tech stack — settled
 
 1. Backend: FastAPI vs Node for a webhook + state machine. → #9, #30 (Python, FastAPI)
 2. Database: Supabase vs local Postgres vs SQLite for a demo with live dashboard updates. → #26 (Supabase)
@@ -273,7 +282,7 @@ To research with Claude web. Sections 5.1 and 5.2 are for the later WhatsApp ada
 6. LLM for free-text parsing in the MVP, or buttons only? → #13 (buttons first)
 7. Reference repo `Aditya26189/WhatsApp-Bot` has no license file: reuse rules, and which parts are worth rewriting. → #17 (reference only)
 
-### 5.5 Product and data — open
+### 5.5 Product and data — not pursued, except item 3 (#14, #40, #78)
 
 1. Typical ticket prices and venue capacities for indie and mid-size artists in target cities.
 2. Interest-to-purchase conversion benchmarks for event pre-registration, to make capacity recommendations defensible.
@@ -281,7 +290,7 @@ To research with Claude web. Sections 5.1 and 5.2 are for the later WhatsApp ada
 4. How to check that stated intent predicts purchase (waitlist, deposit, fake-door test).
 5. Self-selection bias: how to state it in a pitch without weakening it.
 
-### 5.6 Interview framing — open
+### 5.6 Interview framing — not pursued
 
 1. What do interviewers look for in a "working MVP": live demo, architecture explanation, tradeoff reasoning, metrics?
 2. Which two or three numbers should the demo end on (real fans reached, completion rate, recommendation output)?

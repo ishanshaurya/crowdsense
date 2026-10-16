@@ -21,6 +21,11 @@ STEP_LABEL = {
 }
 VIEW_LABEL = {"simulated": "Simulated data", "real": "Real"}
 BADGE_LABEL: dict[Badge | None, str] = {"growing": "📈 Growing", "new": "🆕 New", None: ""}
+ANNOUNCE_TITLE = "Announce a show"
+NOBODY = "Nobody to notify in this city yet."
+PAST_DATE = "Pick today or a later date."
+QUEUED = "Queued. Fans get it within a minute or two."
+ALREADY_QUEUED = "Already queued for this city and date."
 OTHER = "Other / not listed"
 NO_TAG = "no tag"
 _IST = ZoneInfo(IST)
@@ -34,6 +39,10 @@ def banner(report: DemandReport) -> str:
         f":{colour}-badge[{VIEW_LABEL[report.view]}] **{report.counted:,} counted {fans}** "
         f"({report.started:,} started)"
     )
+
+
+def will_send(count: int) -> str:
+    return f"Will send to {count:,} {'fan' if count == 1 else 'fans'}"
 
 
 def venue_label(venue: Venue | None) -> str:

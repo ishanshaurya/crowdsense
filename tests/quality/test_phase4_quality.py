@@ -12,6 +12,7 @@ from tests.support import ROOT, decision
 
 DASHBOARD = sorted((ROOT / "dashboard").glob("*.py"))
 ALLOWED_CORE = {"core.store", "core.demand", "core.insights", "core.config", "core.catalog"}
+ALLOWED_CORE |= {"core.outbound"}  # phase 5: the preview is the text that is sent (#75, P5-U07)
 SQL = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|FROM|JOIN|WHERE|GROUP BY|ORDER BY|COUNT|SUM)\b")
 MATH_OPS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow)
 MATH_CALLS = {

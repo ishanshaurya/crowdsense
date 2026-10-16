@@ -4,7 +4,7 @@ All phase 1 to 3 tests must still pass. Business rules stay in `core/insights.py
 
 ## Build
 
-1. `dashboard/` Streamlit app reading through `core/demand.py` (SQL aggregates) and `core/insights.py`, using a read-only DB role with INSERT on `announcement_requests` only (decisions 57, 80).
+1. `dashboard/` Streamlit app reading through `core/demand.py` (SQL aggregates) and `core/insights.py`, using a read-only DB role: SELECT only in this phase; INSERT on `announcement_requests` arrives in phase 5 (decisions 57, 80, 105).
 2. Views: top cities, price distribution, group size distribution, city × venue heatmap, response funnel, weekly growth per city, source breakdown, recommendations (venue, price band, city priority).
 3. Simulated / Real switch (default Simulated, never mixed), "simulated data" badge, live refresh, one hero recommendation card.
 4. Emails hidden by default; a toggle shows them for the current session only. Emails never appear in logs or in any export (decision 60). Behind the password gate.

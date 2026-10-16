@@ -11,7 +11,7 @@ All phase 1 tests must still pass.
 5. **Record real payloads** from your own bot into `fixtures/telegram/` (see its README), then write the parse tests against them.
 6. Resend sweeper in the webhook service: every 30 s, claim `unsent` replies older than 10 s, send, mark `sent` (decision 72).
 7. Run locally with ngrok; register the webhook.
-8. Input caps in core, so every channel gets them (decision 95, pending in `docs/decisions.md`). The engine cuts inbound text to 1,000 characters before it is stored in `events` or reaches `decide`. A `source_tag` is kept only if it matches `^[A-Za-z0-9_-]{1,64}$` (Telegram's own deep-link rule); anything else is stored as no tag and the fan still gets in. Postgres length limits on `events` text, `identities.source_tag`, `fans.venue_note` and `fans.email` arrive in a new migration (0001 and 0002 are applied to Supabase in this phase, so they are not edited). Must land here: phase 3 allows no engine or schema change, and its public web chat has no Telegram limits.
+8. Input caps in core, so every channel gets them (decision 95). The engine cuts inbound text to 1,000 characters before it is stored in `events` or reaches `decide`. A `source_tag` is kept only if it matches `^[A-Za-z0-9_-]{1,64}$` (Telegram's own deep-link rule); anything else is stored as no tag and the fan still gets in. Postgres length limits on `events` text, `identities.source_tag`, `fans.venue_note` and `fans.email` arrive in a new migration (0001 and 0002 are applied to Supabase in this phase, so they are not edited). Must land here: phase 3 allows no engine or schema change, and its public web chat has no Telegram limits.
 
 ## Unit tests (adapter, no network)
 

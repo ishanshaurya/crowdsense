@@ -17,7 +17,9 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str
+    """The URL holds the owner's password, so it is left out of `repr` like the other secrets."""
+
+    database_url: str = field(repr=False)
     artist_name: str
 
 
@@ -69,6 +71,7 @@ class DashboardSettings:
 
     database_url: str = field(repr=False)
     password: str = field(repr=False)
+    artist_name: str = DEFAULT_ARTIST_NAME  # the announcement preview matches what is sent
 
 
 def load_dashboard_settings(environ: Mapping[str, str]) -> DashboardSettings:
@@ -83,4 +86,5 @@ def load_dashboard_settings(environ: Mapping[str, str]) -> DashboardSettings:
         raise ConfigError(
             f"DASHBOARD_PASSWORD must be at least {MIN_DASHBOARD_PASSWORD} characters"
         )
-    return DashboardSettings(database_url=url, password=password)
+    artist_name = environ.get("ARTIST_NAME", "").strip() or DEFAULT_ARTIST_NAME
+    return DashboardSettings(database_url=url, password=password, artist_name=artist_name)

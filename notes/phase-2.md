@@ -137,11 +137,11 @@ DATABASE_URL=postgresql://localhost:5432/bench uv run python -m scripts.bench_tu
 - **DATABASE_URL uses port 5432 (session pooler).** #67 wants the transaction pooler (6543) for the webhook. Both work (`prepare_threshold=None` is set); the pool is capped at 5 for the session pooler's small limit.
 - **detect-secrets flags** the header-name constant and the fake test secret; they carry `# pragma: allowlist secret`.
 
-## Open items for phase 3
+## Carried into phase 3
 
-- Web chat adapter: one new file implementing `adapters.base.Adapter` (`answer_tap` / `confirm_tap` can be no-ops), plus one registry line in `build_app`. The sweeper already filters by registered channels, so web-sim replies never block Telegram resends.
-- Numbered-text choices (phase 1 gotcha) are still not built; the web chat may need them, and core is frozen in phase 3.
-- `RecentTaps` is per process; it is fine for one laptop process.
+- Web chat adapter: done in phase 3 (one adapter file, its routes in `api/`, one registry line, #101). The sweeper filters by registered channels, so web chat replies never block Telegram resends.
+- Numbered-text choices (phase 1 gotcha) were not built; the web chat uses buttons, so nothing needs them.
+- `RecentTaps` is per process; fine for one laptop process.
 
 ## Likely interview Q&A
 

@@ -1,6 +1,6 @@
 # Testing
 
-Tests are the living spec. Each phase in `docs/plan.md` has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. No code exists yet; this folder is written first and the build follows it.
+Tests are the living spec. Each phase in `docs/plan.md` has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. This folder was written first and the build followed it; phases 1 to 4 are built.
 
 ## Folder map
 
@@ -34,7 +34,7 @@ testing/
 ## Test ids and markers
 
 - Id format: `P<phase>-<layer><nn>`. Layers: `U` unit, `C` component, `M` manual, `K` contract, `R` property, `L` load, `X` resilience. Example `P1-U03`. Quality checks use `Q-<nn>`.
-- Proposed pytest markers: `unit`, `component`, `contract`, `property`, `load`, `manual`. Each test is also tagged with the decision numbers it proves, for example `@decision(31)`, which feeds `traceability.md`.
+- Pytest markers in use: `unit`, `component` (`contract`, `property` and `load` arrive in phase 6). Each test is also tagged with the decision numbers it proves, for example `@decision(31)`, which feeds `traceability.md`.
 - Layer meaning:
   - **Unit:** no I/O. `decide`, validators, insights, flow validation.
   - **Component:** engine with the in-memory store, then the same tests against real Postgres (pytest-postgresql, decision 44). Webhook with a fake Telegram sender.
@@ -74,16 +74,16 @@ All of A1 to A10 are accepted (decision 48); A1 to A4 were also confirmed indivi
 | A3 | Fans who chose "Other / not listed" | Count in city attendance, city priority and price band; excluded from per-venue demand | (confirmed, decision 51) |
 | A4 | Which fans "count" | Fans who reached the done step at least once (`completed_at` set). Partial fans appear only in the funnel; a later edit does not uncount (decision 70) | (confirmed, decision 52) |
 | A5 | Growth badge when last week had 0 signups | Show "new" instead of a percentage; no division by zero |
-| A6 | Week boundary for growth | Rolling 7 days vs the 7 days before, by `created_at` |
+| A6 | Week boundary for growth | Rolling 7 days vs the 7 days before, by `completed_at` (decision 85) |
 | A7 | Returning fan changes city | Venue is cleared and asked again, because venues belong to a city |
-| A8 | `/delete` | Removes `fans`, `answers`, `identities`, `sessions` and the fan's `events`; increments `funnel_counts` for the step the fan was on (decisions 45, 48) |
+| A8 | `/delete` | Removes `fans`, `answers`, `identities`, `sessions` and the fan's `events`, `replies`, increments `funnel_counts` for the furthest step the fan reached (decisions 45, 48, 81, 84) |
 | A9 | Opted-out fan sends `/start` again | Re-subscribes, sets `opted_out = false`, resumes at their saved step |
 | A10 | Free-text step receives a button tap, or the reverse | Re-ask the current step |
 
-## Running (proposed, once code exists)
+## Running
 
 ```
-pytest -m unit
-pytest -m "unit or component"       # phases 1 to 5 gate
-pytest                               # everything; CI default
+uv run pytest -m unit
+uv run pytest -m "unit or component"       # phases 1 to 5 gate
+uv run pytest -q --cov=core --cov-fail-under=90   # everything; CI default
 ```

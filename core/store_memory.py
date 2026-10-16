@@ -9,13 +9,14 @@ import asyncio
 from collections.abc import AsyncIterator, Callable, Collection, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, cast
 
 from core.catalog import BUDGET_OPTIONS, GROUP_OPTIONS, VENUES, Venue
 from core.flow import FLOW_ID
 from core.store import (
     SNAPSHOT_COLUMNS,
+    AnnouncementRow,
     AnswerRow,
     EventRow,
     FanRow,
@@ -46,6 +47,8 @@ class _Tables:
     funnel: dict[str, int] = field(default_factory=dict)
     identity_locks: dict[tuple[str, str], asyncio.Lock] = field(default_factory=dict)
     claimed: set[int] = field(default_factory=set)
+    requests: dict[int, tuple[AnnouncementRow, str]] = field(default_factory=dict)  # row, status
+    claimed_requests: set[int] = field(default_factory=set)
     last_id: int = 0
 
     def next_id(self) -> int:
@@ -101,6 +104,36 @@ class InMemoryStore:
     async def funnel_counts(self) -> dict[str, int]:
         return dict(self._t.funnel)
 
+    def request_announcement(self, city: str, event_date: date) -> int:
+        """What the dashboard's INSERT does on Postgres; the fake has no dashboard role."""
+        if any((r.city, r.event_date) == (city, event_date) for r, _ in self._t.requests.values()):
+            raise IntegrityViolation(f"already requested: {city} {event_date}")
+        request_id = self._t.next_id()
+        self._t.requests[request_id] = (AnnouncementRow(request_id, city, event_date), "pending")
+        return request_id
+
+    def request_status(self, request_id: int) -> str:
+        return self._t.requests[request_id][1]
+
+
+def audience(t: _Tables, city: str) -> list[IdentityRow]:
+    """The `announcement_audience` SQL rule (#85); the contract suite runs both stores."""
+    return sorted(
+        (
+            i
+            for i in t.identities.values()
+            if i.fan_id is not None
+            and i.channel == "telegram"
+            and i.consent is True
+            and not i.opted_out
+            and (fan := t.fans.get(i.fan_id)) is not None
+            and fan.city == city
+            and fan.completed_at is not None
+            and not fan.is_simulated
+        ),
+        key=lambda i: cast(int, i.fan_id),
+    )
+
 
 def _with_user(t: _Tables, row: ReplyRow) -> ReplyRow:
     user = next(
@@ -120,6 +153,7 @@ class _MemoryTx:
         self._undo: list[Callable[[], None]] = []
         self._locks: list[asyncio.Lock] = []
         self._claims: set[int] = set()
+        self._request_claims: set[int] = set()
 
     def rollback(self) -> None:
         for undo in reversed(self._undo):
@@ -128,6 +162,7 @@ class _MemoryTx:
 
     def release(self) -> None:
         self._t.claimed -= self._claims
+        self._t.claimed_requests -= self._request_claims
         for lock in self._locks:
             lock.release()
 
@@ -264,7 +299,7 @@ class _MemoryTx:
     ) -> list[ReplyRow]:
         free = (
             _with_user(self._t, r)
-            for r in sorted(self._t.replies.values(), key=lambda r: r.id)
+            for r in sorted(self._t.replies.values(), key=lambda r: (r.priority, r.id))
             if r.status == "unsent"
             and r.ts < older_than
             and r.id not in self._t.claimed
@@ -287,6 +322,42 @@ class _MemoryTx:
         for key in doomed:
             self._pop(self._t.replies, key)
         return len(doomed)
+
+    async def claim_announcement(self) -> AnnouncementRow | None:
+        for request_id, (row, status) in sorted(self._t.requests.items()):
+            if status == "pending" and request_id not in self._t.claimed_requests:
+                self._t.claimed_requests.add(request_id)
+                self._request_claims.add(request_id)
+                return row
+        return None
+
+    async def fan_out(self, request_id: int, city: str, reply: Reply, now: datetime) -> int:
+        queued = {
+            r.fan_id
+            for r in self._t.replies.values()
+            if r.external_msg_id.startswith(f"ann-{request_id}-")
+        }
+        added = 0
+        for identity in audience(self._t, city):
+            fan_id = cast(int, identity.fan_id)
+            msg_id = f"ann-{request_id}-{fan_id}"
+            key = (identity.channel, msg_id)
+            if key not in self._t.events:
+                payload = {"kind": "announcement", "request_id": request_id}
+                self._put(self._t.events, key, EventRow(*key, fan_id, "out", payload, now))
+            if fan_id in queued:
+                continue
+            reply_id = self._t.next_id()
+            row = ReplyRow(
+                reply_id, fan_id, identity.channel, msg_id, reply, "unsent", now, priority=1
+            )
+            self._put(self._t.replies, reply_id, row)
+            added += 1
+        return added
+
+    async def finish_announcement(self, request_id: int, recipients: int, now: datetime) -> None:
+        row, _ = self._t.requests[request_id]
+        self._put(self._t.requests, request_id, (row, "fanned_out"))
 
     async def bump_funnel(self, step_id: str) -> None:
         self._put(self._t.funnel, step_id, self._t.funnel.get(step_id, 0) + 1)

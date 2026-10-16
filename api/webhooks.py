@@ -29,6 +29,7 @@ from core.clock import Clock, SystemClock
 from core.config import load_settings, load_telegram_settings
 from core.engine import Engine
 from core.flow import APOLOGY_TEXT
+from core.outbound import Outbound
 from core.store import Store, StoreUnavailable
 from core.store_postgres import PostgresStore
 from core.types import InboundEvent, Reply
@@ -148,6 +149,7 @@ def build_app() -> FastAPI:
     }
     sender = Sender(engine, Pacer())
     webhook = Webhook(engine, store, adapters, clock, sender)
-    sweeper = Sweeper(store, engine, sender, adapters, clock)
+    outbound = Outbound(store, clock, artist_name=settings.artist_name)
+    sweeper = Sweeper(store, engine, sender, adapters, clock, outbound=outbound)
     app = create_app(webhook, sweeper=sweeper, on_shutdown=(client.aclose, store.close))
     return mount_chat(app, engine, store, clock)  # web chat at /chat (#77), not in `adapters`

@@ -7,7 +7,7 @@ store never reads the clock (#56).
 from collections.abc import Collection, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Protocol
 
 from core.catalog import Venue
@@ -96,6 +96,16 @@ class ReplyRow:
     status: str
     ts: datetime
     external_user_id: str | None = None  # the fan's identity on `channel`, for resends (#72)
+    priority: int = 0  # 0 = chat reply, 1 = announcement; chat replies are claimed first
+
+
+@dataclass(frozen=True)
+class AnnouncementRow:
+    """A pending `announcement_requests` row: the only fields the dashboard can set (#80)."""
+
+    id: int
+    city: str
+    event_date: date
 
 
 class Tx(Protocol):
@@ -160,6 +170,22 @@ class Tx(Protocol):
         ...
 
     async def bump_funnel(self, step_id: str) -> None: ...
+
+    async def claim_announcement(self) -> AnnouncementRow | None:
+        """Claim the oldest pending request no other open transaction holds (`SKIP LOCKED`)."""
+        ...
+
+    async def fan_out(self, request_id: int, city: str, reply: Reply, now: datetime) -> int:
+        """Queue `reply` once per fan in the city's audience (#85); returns how many were new.
+
+        Each fan gets an outbound event and an unsent priority-1 reply; a fan already queued
+        for this request is skipped, so a rerun adds nothing.
+        """
+        ...
+
+    async def finish_announcement(
+        self, request_id: int, recipients: int, now: datetime
+    ) -> None: ...
 
     async def delete_fan(self, fan_id: int) -> None:
         """Remove the fan with its identities, sessions, answers, events and replies (#81)."""

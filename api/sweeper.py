@@ -1,5 +1,8 @@
 """Resend sweeper (#72): every 30 s, claim unsent replies older than 10 s, send, mark sent.
 
+Each pass first fans out pending announcement requests (#80, `core.outbound`); their replies are
+priority 1, so chat replies are claimed before them.
+
 The 10 s age keeps it away from replies the webhook is still sending. Claims use
 `FOR UPDATE SKIP LOCKED`, so two sweepers never take the same row. Delivery is at-least-once:
 a crash after a send but before the commit sends that reply again.
@@ -14,6 +17,7 @@ from adapters.base import Adapter
 from api.sender import Outcome, Sender, block
 from core.clock import Clock
 from core.engine import Engine
+from core.outbound import Outbound
 from core.store import Store
 
 log = logging.getLogger("crowdsense.sweeper")
@@ -31,13 +35,18 @@ class Sweeper:
         interval: float = 30.0,
         min_age: float = 10.0,
         batch: int = 50,
+        outbound: Outbound | None = None,
     ) -> None:
         self._store, self._engine, self._sender = store, engine, sender
         self._adapters, self._clock = adapters, clock
         self.interval, self.min_age, self.batch = interval, min_age, batch
+        self._outbound = outbound
 
     async def sweep_once(self) -> int:
         """One pass; returns how many replies were sent."""
+        if self._outbound is not None:
+            while await self._outbound.fan_out_next() is not None:
+                pass
         cutoff = self._clock.now() - timedelta(seconds=self.min_age)
         stuck: set[tuple[str, str]] = set()
         blocked: set[tuple[str, str]] = set()

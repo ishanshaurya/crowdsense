@@ -31,13 +31,13 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 
 ## Phase 4: Dashboard
 
-- [ ] Open every view: top cities, price, group size, heatmap, funnel, weekly growth, source, recommendations.
-- [ ] Numbers on screen match a hand check on one city.
-- [ ] "Simulated data" badge appears when simulated data is shown.
-- [ ] Simulated / Real switch changes the numbers; Real shows only the test accounts.
-- [ ] Complete a new chat on your phone; after a refresh the dashboard shows the new fan.
-- [ ] Hero recommendation card reads well in plain language.
-- [ ] Jaipur and Indore show as growing.
+- [x] Open every view: top cities, price, group size, heatmap, funnel, weekly growth, source, recommendations. (Supabase 2026-10-16: all 10 views and the hero card render)
+- [x] Numbers on screen match a hand check on one city. (Mumbai 3,447 = 2,001 + 1,280 + 166 Other)
+- [x] "Simulated data" badge appears when simulated data is shown.
+- [x] Simulated / Real switch changes the numbers; Real shows only the test accounts. (Real: 2 counted fans)
+- [x] Complete a new chat on your phone; after a refresh the dashboard shows the new fan. (2026-10-17: web chat on the phone; Real went 2 → 3 counted fans, new Kolkata fan in Latest fans. Same path measured by script: 0.55 to 4.45 s.)
+- [x] Hero recommendation card reads well in plain language.
+- [x] Jaipur and Indore show as growing.
 
 ## Phase 5: Outbound and end-to-end rehearsal
 
@@ -46,6 +46,6 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 - [ ] Press notify twice quickly; the phone receives it once.
 - [ ] Send `/stop`, notify again; no message arrives.
 - [ ] Full rehearsal in order: tap link, chat, dashboard updates, notify, receive, stop. Time it.
-- [ ] Open `<PUBLIC_URL>/chat` on a phone over mobile data through ngrok and finish the flow; only then share the link with an interviewer (#103, deferred from phase 3).
+- [x] Open `<PUBLIC_URL>/chat` on a phone over mobile data through ngrok and finish the flow; only then share the link with an interviewer (#103, deferred from phase 3). (2026-10-17: done by the user from the phone; server log: 7 `/chat/message` posts, all 200, no errors; one new completed fan in the Real view. Mobile data itself is the user's word, not visible in the log.)
 - [ ] README states limits (self-selection bias, stated intent vs purchase, simulated data).
 - [ ] Architecture diagram is current.

@@ -1,6 +1,6 @@
 # Phase 4: Dashboard
 
-Status: **done.** 456 tests pass (the 371 from phases 1 to 3 are all still green), `core/` coverage 98.74%. ruff, ruff format, mypy strict (now incl. `dashboard/`), import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are clean. Supabase: dashboard role created (#105), public API roles revoked (#108), timings measured; manual checklist 6/7 (phone chat skipped). Committed as `phase 4`, tag `phase-4`.
+Status: **done.** 456 tests pass (the 371 from phases 1 to 3 are all still green), `core/` coverage 98.74%. ruff, ruff format, mypy strict (now incl. `dashboard/`), import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are clean. Supabase: dashboard role created (#105), public API roles revoked (#108), timings measured; manual checklist 7/7. Committed as `phase 4`, tag `phase-4`.
 
 ## Baseline (before any phase 4 change, 2026-10-16)
 
@@ -17,8 +17,8 @@ Status: **done.** 456 tests pass (the 371 from phases 1 to 3 are all still green
 - [x] E. P4-C01, P4-C07 at 20k; EXPLAIN ANALYZE numbers; no index needed (no migration)
 - [x] F. Supabase: role created 2026-10-16 on the ap-south-1 pooler; role check passed (reads as allowed, every write and hidden read refused); timings recorded
 - [x] F2. Supabase `anon` / `authenticated` had full access to `fans`, `identities`, `answers`, `events` with RLS off. Revoked 2026-10-16 (#108, `scripts/lock_public_api.py`, run by the user): all 7 checked tables now select=False, write=False for both roles
-- [x] Notes, traceability, metrics (Supabase rows pending)
-- [x] Manual checklist Phase 4: 6 of 7 checked on Supabase data (2026-10-16, see below); phone chat skipped by the user
+- [x] Notes, traceability, metrics
+- [x] Manual checklist Phase 4: 7 of 7 (6 on 2026-10-16, the phone item on 2026-10-17, see below)
 
 ## Overview
 
@@ -112,7 +112,7 @@ EXPLAIN's server time is above wall time because ANALYZE adds timing overhead. N
 | Hand check one city | Pass: Mumbai 3,447 fans = Mahalaxmi 2,001 + Bandra 1,280 + Other 166 (heatmap matches); people 9,828 = 5,691 + 3,663 + 474; row sums match for Bengaluru, Delhi NCR, Chennai, Hyderabad, Pune. Suggested venue rule checked by hand for all 10 cities |
 | Simulated badge | Pass: orange "Simulated data" on Simulated, green "Real" on Real |
 | Switch; Real = test accounts only | Pass: Real shows 2 counted fans (Pune, Delhi NCR) |
-| New fan from the phone | Skipped (user, 2026-10-16); same path measured locally: 0.55–4.45 s |
+| New fan from the phone | Pass (2026-10-17): web chat on the phone; Real went 2 → 3 counted fans, new Kolkata fan in Latest fans. Same path measured by script: 0.55–4.45 s. A Telegram run the same day sent only 3 updates (one started, unfinished fan); Telegram's full flow was already proven in phase 2 |
 | Hero card wording | Pass: "Play Mumbai first, at Mahalaxmi Maidan. About 9,828 people want to come (the venue holds 30,000). Price tickets at ₹3,000–6,000: most fans picked it." |
 | Jaipur and Indore growing | Pass: both "📈 Growing" (recommendations + growth caption) |
 | Email toggle (#60) | Pass: column absent until toggled; 13 of 50 with `@example.com`, 37 blank; email table has no toolbar (no CSV) |
@@ -139,7 +139,7 @@ EXPLAIN's server time is above wall time because ANALYZE adds timing overhead. N
 - **Bench the warm path.** `DemandReader` opens its connection lazily (TLS + SCRAM, ~0.7–1 s to Supabase); the first `bench_demand` run timed that as a refresh and pushed p95 to 822 ms. The bench now reports the cold connect separately; the live dashboard keeps the connection warm.
 - **Real funnel vs banner:** the funnel's "started" includes deleted fans from `funnel_counts` (#104), the banner counts live fans only, so Real can show 3 vs 2. Correct, worth one sentence in the demo.
 - `pytest-postgresql` uses trust auth, so suite tests prove grants, not the password check (checked once by hand, above).
-- `Settings.database_url` (phase 1) has no `repr=False`. Out of scope; flagged.
+- `Settings.database_url` (phase 1) had no `repr=False`, so printing the settings would have shown the owner's password. Fixed afterwards (`field(repr=False)` + test).
 
 ## How to run
 

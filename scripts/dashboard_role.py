@@ -9,7 +9,9 @@ Connects with the owner's `DATABASE_URL`. The password is turned into a SCRAM ve
 this machine, so the plain password never reaches the server or its logs; it is never printed.
 Every grant is revoked first, then SELECT is granted on `fans`, `venues`, `funnel_counts` and three
 columns of `identities`. The role also defaults to read-only transactions with a statement
-timeout, but the grants are the real guard. Phase 5 adds INSERT on `announcement_requests` (#80).
+timeout, but the grants are the real guard. Phase 5 (#80): INSERT on two columns of
+`announcement_requests` (city, event_date) plus the RLS policy that lets that insert through,
+and EXECUTE on the count-only `announcement_audience_count`; never the audience rows.
 """
 
 import argparse
@@ -26,6 +28,8 @@ from scripts.seed import guard_host
 
 READ_TABLES = ("fans", "venues", "funnel_counts")
 IDENTITY_COLUMNS = ("fan_id", "channel", "source_tag")
+REQUEST_COLUMNS = ("city", "event_date")
+COUNT_FUNCTION = "announcement_audience_count(text)"
 CONNECTION_LIMIT = 5
 REDACTED = sql.Literal("<SCRAM verifier>")
 
@@ -34,6 +38,7 @@ def grant_statements(role: str = DASHBOARD_ROLE) -> list[sql.Composed]:
     name = sql.Identifier(role)
     tables = sql.SQL(", ").join(sql.Identifier(t) for t in READ_TABLES)
     columns = sql.SQL(", ").join(sql.Identifier(c) for c in IDENTITY_COLUMNS)
+    request_columns = sql.SQL(", ").join(sql.Identifier(c) for c in REQUEST_COLUMNS)
     statements = [
         "ALTER ROLE {r} SET default_transaction_read_only = on",
         "ALTER ROLE {r} SET statement_timeout = '5s'",
@@ -44,8 +49,22 @@ def grant_statements(role: str = DASHBOARD_ROLE) -> list[sql.Composed]:
         "GRANT USAGE ON SCHEMA public TO {r}",
         "GRANT SELECT ON {tables} TO {r}",
         "GRANT SELECT ({columns}) ON identities TO {r}",
+        "GRANT INSERT ({request_columns}) ON announcement_requests TO {r}",
+        "DROP POLICY IF EXISTS dashboard_insert ON announcement_requests",
+        "CREATE POLICY dashboard_insert ON announcement_requests FOR INSERT TO {r} "
+        "WITH CHECK (true)",
+        "GRANT EXECUTE ON FUNCTION {count_function} TO {r}",
     ]
-    return [sql.SQL(s).format(r=name, tables=tables, columns=columns) for s in statements]
+    return [
+        sql.SQL(s).format(
+            r=name,
+            tables=tables,
+            columns=columns,
+            request_columns=request_columns,
+            count_function=sql.SQL(COUNT_FUNCTION),
+        )
+        for s in statements
+    ]
 
 
 def login_statement(exists: bool, verifier: sql.Composable, role: str = DASHBOARD_ROLE) -> Any:
@@ -96,8 +115,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     with psycopg.connect(url, prepare_threshold=None) as conn:
         created = apply(conn, password)
     tables = ", ".join(READ_TABLES) + f", identities ({', '.join(IDENTITY_COLUMNS)})"
+    inserts = f"announcement_requests ({', '.join(REQUEST_COLUMNS)})"
     action = "created" if created else "updated"
-    sys.stdout.write(f"host {host}: role {DASHBOARD_ROLE} {action}; SELECT on {tables}\n")
+    sys.stdout.write(
+        f"host {host}: role {DASHBOARD_ROLE} {action}; SELECT on {tables}; "
+        f"INSERT on {inserts}; EXECUTE on {COUNT_FUNCTION}\n"
+    )
 
 
 if __name__ == "__main__":

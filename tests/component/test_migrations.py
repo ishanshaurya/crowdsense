@@ -14,6 +14,7 @@ TABLES = {
     "events",
     "replies",
     "funnel_counts",
+    "announcement_requests",
 }
 
 

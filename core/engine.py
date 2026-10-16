@@ -165,6 +165,8 @@ async def _write(tx: Tx, event: InboundEvent, fan_id: int, write: Write, now: da
             await tx.set_consent(channel, user, value)
         case SetOptedOut(value):
             await tx.set_opted_out(channel, user, value)
+            if value:  # /stop: nothing queued earlier (an announcement) may still go out (#36)
+                await tx.drop_unsent(channel, user)
         case MarkCompleted(at):
             await tx.mark_completed(fan_id, at)
         case DeleteFan():

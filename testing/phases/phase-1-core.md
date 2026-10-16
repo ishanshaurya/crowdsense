@@ -91,6 +91,6 @@ Run a dev REPL against the engine and read the whole conversation for tone and c
 ## Exit (final output)
 
 - All unit and component tests above pass on the fake and on Postgres.
-- Coverage on `core/` at least 85% (same as `docs/plan.md`).
+- Coverage on `core/` at least 90% (Q-09).
 - Quality checks `Q-01` to `Q-10` pass (`quality/architecture-quality.md`).
 - The REPL manual item is signed off.

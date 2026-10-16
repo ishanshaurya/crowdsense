@@ -11,6 +11,7 @@ import pytest
 
 from scripts import dashboard_role, lock_public_api
 from tests.component.test_dashboard_role import PASSWORD
+from tests.conftest import migrate
 from tests.support import decision
 
 SUPABASE_LIKE = [
@@ -67,3 +68,55 @@ def test_print_sql_needs_no_database(capsys: pytest.CaptureFixture[str]) -> None
     out = capsys.readouterr().out
     assert 'REVOKE ALL ON ALL TABLES IN SCHEMA public FROM "anon", "authenticated";' in out
     assert out.count("ALTER DEFAULT PRIVILEGES") == 3
+
+
+FUNCTIONS = ("announcement_audience(text)", "announcement_audience_count(text)")
+
+
+@decision(80, 108, 115)
+def test_migration_0004_closes_its_own_objects_without_the_script(pg_url: str) -> None:
+    """Supabase-like roles and default grants already exist when 0004 runs; nothing else is run."""
+    migrate(pg_url, "0003")
+    with psycopg.connect(pg_url, autocommit=True) as conn:
+        for role in lock_public_api.API_ROLES:
+            if not conn.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,)).fetchone():
+                conn.execute(f"CREATE ROLE {role} NOLOGIN")
+        for statement in SUPABASE_LIKE:
+            conn.execute(statement)
+        conn.execute(
+            "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+            "GRANT ALL ON FUNCTIONS TO anon, authenticated"
+        )
+    migrate(pg_url)
+    with psycopg.connect(pg_url, autocommit=True) as conn:
+        for role in lock_public_api.API_ROLES:
+            table = conn.execute(
+                "SELECT count(*) FROM information_schema.role_table_grants "
+                "WHERE grantee = %s AND table_name = 'announcement_requests'",
+                (role,),
+            ).fetchone()
+            assert table == (0,), role
+            for fn in FUNCTIONS:
+                can = conn.execute(
+                    "SELECT has_function_privilege(%s, %s, 'EXECUTE')", (role, fn)
+                ).fetchone()
+                assert can == (False,), (role, fn)
+        rls = conn.execute(
+            "SELECT relrowsecurity FROM pg_class WHERE relname = 'announcement_requests'"
+        ).fetchone()
+        assert rls == (True,)
+
+
+@decision(108, 115)
+def test_after_the_lock_api_roles_hold_no_table_grant_at_all(
+    admin: psycopg.Connection[Any],
+) -> None:
+    lock_public_api.lock(admin)
+    for role in lock_public_api.API_ROLES:
+        rows = admin.execute(
+            "SELECT table_name FROM information_schema.role_table_grants "
+            "WHERE grantee = %s AND table_schema = 'public'",
+            (role,),
+        ).fetchall()
+        assert rows == [], role
+    assert "announcement_requests" in lock_public_api.CHECKED_TABLES

@@ -6,6 +6,7 @@ its own database (and the reader's pool is closed, `on_release`).
 
 import time
 from collections.abc import Iterator
+from datetime import UTC, date, datetime
 from urllib.parse import urlsplit
 
 import psycopg
@@ -15,7 +16,9 @@ from streamlit.testing.v1 import AppTest
 
 from core.clock import SystemClock
 from core.engine import Engine
+from core.outbound import today_ist
 from core.store_postgres import PostgresStore
+from dashboard import text as dashboard_text
 from scripts import dashboard_role
 from tests.component.helpers import flow, talk
 from tests.component.test_dashboard_role import PASSWORD, role_url  # noqa: F401 (fixture)
@@ -158,3 +161,78 @@ def test_p4_u10_empty_database_shows_captions_not_blank_charts(
     assert {s.value for s in app.subheader} == VIEW_TITLES
     assert [c.value for c in app.caption].count("Nothing in this view yet.") == len(VIEW_TITLES)
     assert "**0 counted fans** (0 started)" in markdown(app)
+
+
+def _eligible_fan(url: str, user: str, city: str = "Indore") -> None:
+    with psycopg.connect(url, autocommit=True) as conn:
+        fan_id = conn.execute(
+            "INSERT INTO fans (city, completed_at, created_at, last_seen) "
+            "VALUES (%s, now(), now(), now()) RETURNING id",
+            (city,),
+        ).fetchone()[0]  # type: ignore[index]
+        conn.execute(
+            "INSERT INTO identities (channel, external_user_id, fan_id, consent) "
+            "VALUES ('telegram', %s, %s, true)",
+            (user, fan_id),
+        )
+
+
+def _requests(url: str) -> list[tuple[object, ...]]:
+    with psycopg.connect(url) as conn:
+        return conn.execute("SELECT city, status FROM announcement_requests").fetchall()
+
+
+def _announce_form(app: AppTest, city: str) -> AppTest:
+    sign_in(app)
+    app.selectbox(key="announce_city").set_value(city).run()
+    assert not app.exception, app.exception
+    return app
+
+
+@decision(75, 80, 110)
+def test_p5_u07_u08_preview_and_count_then_queue(app: AppTest, pg_migrated_url: str) -> None:
+    _eligible_fan(pg_migrated_url, "a1")
+    _eligible_fan(pg_migrated_url, "a2")
+    _announce_form(app, "Indore")
+    assert any("Will send to 2 fans" in m.value for m in app.markdown)
+    assert any(t.value.startswith(f"{ARTIST} is coming to Indore.") for t in app.text)
+    app.button(key="announce").click().run()
+    assert [s.value for s in app.success] == [dashboard_text.QUEUED]
+    assert _requests(pg_migrated_url) == [("Indore", "pending")]
+
+
+@decision(41, 75, 112)
+def test_p5_c03_double_click_is_refused_twice(app: AppTest, pg_migrated_url: str) -> None:
+    _eligible_fan(pg_migrated_url, "a1")
+    _announce_form(app, "Indore")
+    app.button(key="announce").click().run()
+    assert app.button(key="announce").disabled  # same session: the button locks
+    with psycopg.connect(pg_migrated_url, autocommit=True) as conn:  # another session got in first
+        conn.execute("DELETE FROM announcement_requests")
+        conn.execute(
+            "INSERT INTO announcement_requests (city, event_date) "
+            "VALUES ('Indore', (now() AT TIME ZONE 'Asia/Kolkata')::date)"
+        )
+    app.session_state["announced"] = set()
+    app.run()
+    app.button(key="announce").click().run()
+    assert [i.value for i in app.info] == [dashboard_text.ALREADY_QUEUED]
+    assert len(_requests(pg_migrated_url)) == 1
+
+
+@decision(15, 75)
+def test_p5_c04_nobody_to_notify_disables_the_button(app: AppTest) -> None:
+    _announce_form(app, "Jaipur")
+    assert any(c.value == dashboard_text.NOBODY for c in app.caption)
+    assert app.button(key="announce").disabled
+
+
+@decision(75, 113)
+def test_p5_u09_past_date_never_reaches_the_form(app: AppTest, pg_migrated_url: str) -> None:
+    """Streamlit drops a value under `min_value`; the fan-out refuses past dates as well."""
+    _eligible_fan(pg_migrated_url, "a1")
+    _announce_form(app, "Indore")
+    app.date_input(key="announce_date").set_value(date(2020, 1, 1)).run()
+    today = today_ist(datetime.now(UTC))
+    assert app.date_input(key="announce_date").value == today
+    assert not any(e.value == dashboard_text.PAST_DATE for e in app.error)

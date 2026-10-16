@@ -22,7 +22,16 @@ from psycopg import sql
 from scripts.seed import guard_host
 
 API_ROLES = ("anon", "authenticated")
-CHECKED_TABLES = ("fans", "identities", "answers", "events", "replies", "sessions", "venues")
+CHECKED_TABLES = (
+    "fans",
+    "identities",
+    "answers",
+    "events",
+    "replies",
+    "sessions",
+    "venues",
+    "announcement_requests",
+)
 OBJECTS = ("TABLES", "SEQUENCES", "FUNCTIONS")
 
 

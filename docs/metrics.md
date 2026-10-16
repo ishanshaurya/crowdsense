@@ -66,8 +66,8 @@ Derived from the targets, not measured yet:
 | Metric                               | Target                                                 | How measured           | Phase | Result |
 | ------------------------------------ | ------------------------------------------------------ | ---------------------- | ----- | ------ |
 | Duplicate messages handled           | 100% skipped, no double counting                       | Contract + chaos tests | 1, 6  | —      |
-| Double taps by a brand-new fan       | One fan, no error                                      | `P1-S08` (#88)         | 1     | —      |
-| Half-saved turns after a crash       | 0                                                      | `P1-S03` (#55)         | 1     | —      |
+| Double taps by a brand-new fan       | One fan, no error                                      | `P1-S08` (#88)         | 1     | Pass, both backends |
+| Half-saved turns after a crash       | 0                                                      | `P1-S03` (#55)         | 1     | 0, both backends |
 | Same tap delivered twice by Telegram | Skipped by `update_id`                                 | `P2-C03` (#90)         | 2     | Pass, both backends |
 | Taps on old buttons                  | 100% ignored, no state change                          | `P2-C10` (#91)         | 2     | Pass, both backends (+ `P2-C17`) |
 | Fan double-taps one button           | One answer, one reply                                  | `P2-C09` (#91, #92)    | 2     | Pass, both backends (concurrent taps) |
@@ -77,8 +77,8 @@ Derived from the targets, not measured yet:
 | Engine errors shown to fan           | One apology, no retry storm                            | `P2-C04` (#71)         | 2     | Pass, both backends |
 | Opted-out fans messaged              | 0                                                      | `P5-C05`               | 5     | —      |
 | Simulated fans messaged              | 0                                                      | `P3-C05`               | 3     | 0: no seeded replies stored, nothing claimable (#102) |
-| `/delete` leaves fan data            | 0 rows                                                 | `P1-C07` (#81)         | 1     | —      |
-| Coverage on `core/`                  | ≥ 85%                                                  | CI                     | 1     | 98.5% (phase 2) |
+| `/delete` leaves fan data            | 0 rows                                                 | `P1-C07` (#81)         | 1     | 0 rows, both backends |
+| Coverage on `core/`                  | ≥ 90%                                                  | CI                     | 1     | 98.74% (phase 4) |
 
 ## 5. Other non-functional requirements
 
@@ -125,7 +125,7 @@ Derived from the targets, not measured yet:
 ### Maintainability
 
 - Type-checked (strict), linted, formatted.
-- Coverage gate in CI (target 85% on `core/`).
+- Coverage gate in CI (90% on `core/`).
 - Every behaviour decision mapped to a test (`testing/traceability.md`).
 - New channel = one adapter file + passing conformance suite.
 

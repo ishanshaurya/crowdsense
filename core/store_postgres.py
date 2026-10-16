@@ -19,6 +19,7 @@ from psycopg_pool import AsyncConnectionPool
 from core.catalog import Venue
 from core.flow import FLOW_ID
 from core.store import (
+    AnnouncementRow,
     AnswerRow,
     EventRow,
     FanRow,
@@ -49,7 +50,7 @@ _SELECT_IDENTITIES: LiteralString = (
 )
 _SELECT_REPLIES: LiteralString = (
     "SELECT r.id, r.fan_id, r.channel, r.external_msg_id, r.payload, r.status, r.ts, "
-    "i.external_user_id FROM replies r "
+    "r.priority, i.external_user_id FROM replies r "
     "LEFT JOIN identities i ON i.fan_id = r.fan_id AND i.channel = r.channel"
 )
 
@@ -153,6 +154,7 @@ def _reply_row(row: dict[str, Any]) -> ReplyRow:
         status=row["status"],
         ts=row["ts"],
         external_user_id=row["external_user_id"],
+        priority=row["priority"],
     )
 
 
@@ -295,7 +297,7 @@ class _PgTx:
             _SELECT_REPLIES
             + " WHERE r.status = 'unsent' AND r.ts < %s"
             + " AND (%s::text[] IS NULL OR r.channel = ANY(%s::text[]))"
-            + " ORDER BY r.id LIMIT %s FOR UPDATE OF r SKIP LOCKED",
+            + " ORDER BY r.priority, r.id LIMIT %s FOR UPDATE OF r SKIP LOCKED",
             (older_than, wanted, wanted, limit),
         )
         return [_reply_row(row) for row in await cursor.fetchall()]
@@ -308,6 +310,40 @@ class _PgTx:
             (channel, external_user_id),
         )
         return cursor.rowcount
+
+    async def claim_announcement(self) -> AnnouncementRow | None:
+        cursor = await self._run(
+            "SELECT id, city, event_date FROM announcement_requests WHERE status = 'pending' "
+            "ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED"
+        )
+        row = await cursor.fetchone()
+        return None if row is None else AnnouncementRow(**row)
+
+    async def fan_out(self, request_id: int, city: str, reply: Reply, now: datetime) -> int:
+        # The event row comes first: `replies` has a foreign key to `events` (#47).
+        event = Jsonb({"kind": "announcement", "request_id": request_id})
+        await self._run(
+            "INSERT INTO events (channel, external_msg_id, fan_id, direction, payload, ts) "
+            "SELECT a.channel, 'ann-' || %s || '-' || a.fan_id, a.fan_id, 'out', %s, %s "
+            "FROM announcement_audience(%s) a ON CONFLICT DO NOTHING",
+            (request_id, event, now, city),
+        )
+        cursor = await self._run(
+            "INSERT INTO replies "
+            "(fan_id, channel, external_msg_id, payload, ts, priority, announcement_id) "
+            "SELECT a.fan_id, a.channel, 'ann-' || %s || '-' || a.fan_id, %s, %s, 1, %s "
+            "FROM announcement_audience(%s) a "
+            "ON CONFLICT (announcement_id, fan_id) WHERE announcement_id IS NOT NULL DO NOTHING",
+            (request_id, Jsonb(reply_to_json(reply)), now, request_id, city),
+        )
+        return cursor.rowcount
+
+    async def finish_announcement(self, request_id: int, recipients: int, now: datetime) -> None:
+        await self._run(
+            "UPDATE announcement_requests "
+            "SET status = 'fanned_out', recipients = %s, fanned_out_at = %s WHERE id = %s",
+            (recipients, now, request_id),
+        )
 
     async def bump_funnel(self, step_id: str) -> None:
         await self._run(

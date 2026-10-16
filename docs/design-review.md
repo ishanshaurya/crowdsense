@@ -394,7 +394,7 @@ Scanned every doc, test phase and scenario on 2026-10-16. Decisions #78 to #87.
 - #28, phase 4 build step 1: dashboard reads through `demand.py`.
 - docs/architecture.md §10 #7: secret check is already phase 2.
 - Phase 1 build step 6 and exit rows.
-- Coverage: 85% everywhere.
+- Coverage: 90% on `core/` (the gate; the review first proposed 85%).
 - `traceability.md`: rows for #47 to #85; A1–A10 marked confirmed.
 - NFR availability: applies only once cloud hosted.
 - PRD success: phase 6 numbers are after the MVP.

@@ -8,15 +8,25 @@ Reads only through `core.demand` with the read-only role (#105). Streamlit only 
 import hmac
 import os
 import time
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import streamlit as st
 
+from core.catalog import CITIES
 from core.config import ConfigError, DashboardSettings, load_dashboard_settings
 from core.demand import DEFAULT_VIEW, VIEWS, DemandReader, DemandReport, View
+from core.outbound import announcement_reply, audience_count, request_announcement, today_ist
 from core.store import StoreUnavailable
 from dashboard import views
-from dashboard.text import VIEW_LABEL
+from dashboard.text import (
+    ALREADY_QUEUED,
+    ANNOUNCE_TITLE,
+    NOBODY,
+    PAST_DATE,
+    QUEUED,
+    VIEW_LABEL,
+    will_send,
+)
 
 REFRESH_SECONDS = 5
 CACHE_SECONDS = 4  # shared by every open tab: about one query batch per 5 s per view (#106)
@@ -63,6 +73,53 @@ def _live(view: View, show_emails: bool) -> None:
     views.draw_all(report, show_emails)
 
 
+def _announce(settings: DashboardSettings) -> None:
+    """#75: the form only asks; the webhook service builds the audience and sends (#80).
+
+    The database refuses a second request for a city and date; the button is also disabled for
+    that pair once clicked in this session.
+    """
+    with st.expander(ANNOUNCE_TITLE):
+        today = today_ist(datetime.now(UTC))
+        city = st.selectbox("City", CITIES, key="announce_city")
+        day = st.date_input("Tickets open", value=today, min_value=today, key="announce_date")
+        if not isinstance(day, date):
+            return
+        try:
+            with _reader().snapshot() as conn:
+                count = audience_count(conn, city)
+        except StoreUnavailable:
+            st.error("The database cannot be reached. Try again in a moment.")
+            return
+        st.text(announcement_reply(settings.artist_name, city, day).text)  # plain, not markdown
+        st.write(will_send(count))
+        if count == 0:
+            st.caption(NOBODY)
+        if day < today:
+            st.error(PAST_DATE)
+        asked: set[tuple[str, date]] = st.session_state.setdefault("announced", set())
+        blocked = count == 0 or day < today or (city, day) in asked
+        st.button(
+            "Send announcement", disabled=blocked, key="announce", on_click=_send, args=(city, day)
+        )
+        queued = st.session_state.pop("announce_queued", None)
+        if queued is True:
+            st.success(QUEUED)
+        elif queued is False:
+            st.info(ALREADY_QUEUED)
+
+
+def _send(city: str, day: date) -> None:
+    """Runs before the rerun, so the button is already disabled when the page redraws."""
+    st.session_state.setdefault("announced", set()).add((city, day))
+    try:
+        with _reader().snapshot() as conn:
+            st.session_state.announce_queued = request_announcement(conn, city, day)
+    except StoreUnavailable:
+        st.session_state.announced.discard((city, day))  # nothing was queued: allow a retry
+        st.toast("The database cannot be reached. Try again in a moment.")
+
+
 def main() -> None:
     st.set_page_config(page_title="Crowdsense", page_icon="🎤", layout="wide")
     st.title("Crowdsense")
@@ -79,6 +136,7 @@ def main() -> None:
         )
         show_emails = st.toggle("Show emails (this session only)", value=False, key="emails")
     _live(view, show_emails)
+    _announce(settings)
 
 
 main()

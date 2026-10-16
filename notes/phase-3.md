@@ -1,11 +1,11 @@
 # Phase 3: Prove the plugin design (web chat + seed)
 
-Status: **built and green.** 371 tests pass (the 257 from phases 1 and 2 are all still green), `core/` coverage 98.5%. ruff, ruff format, mypy strict, import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are clean. `git diff phase-2 -- core migrations` is empty: **no core or schema change**. **Open:** commit + tag `phase-3`, and phase 2's checkpoint C (live Telegram run). Phone check deferred to phase 5 (#103).
+Status: **built and green.** 371 tests pass (the 257 from phases 1 and 2 are all still green), `core/` coverage 98.5%. ruff, ruff format, mypy strict, import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are clean. `git diff phase-2 -- core migrations` is empty: **no core or schema change**. Committed as `phase 3` (`bc4af01`, tag `phase-3`). Phase 2's checkpoint C is done. The phone check over mobile data (#103) was done on 2026-10-17: a full web chat from the phone through ngrok, 7 posts all 200, one new completed fan in the Real view.
 
 ## Baseline (before any phase 3 change)
 
 - 257 tests pass; every check clean; no diff in `core/` or `migrations/` since tag `phase-2`.
-- Already in the tree, uncommitted, untested: `adapters/web_sim.py`, `api/chat.py`, `api/ratelimit.py`, `api/static/`, the `mount_chat` line in `api/webhooks.py`.
+- The web chat files (`adapters/web_sim.py`, `api/chat.py`, `api/ratelimit.py`, `api/static/`, the `mount_chat` line in `api/webhooks.py`) existed as an untested draft when the phase began; step B wrote their tests.
 
 ## Build checklist
 
@@ -18,7 +18,7 @@ Status: **built and green.** 371 tests pass (the 257 from phases 1 and 2 are all
 - [x] F. Reset (#62, P3-C06)
 - [x] Notes, traceability, metrics
 - [x] Supabase seed (2026-10-16): 20,000 simulated fans, copy 19.8 s over the network, DB 71 MB; 0 replies; 1 real fan untouched
-- [x] Manual checklist Phase 3: browser chat passed (fan 20004: web_sim, real, completed, 8 replies sent); seed spot-check passed. Phone check deferred to phase 5 (#103)
+- [x] Manual checklist Phase 3: browser chat passed (fan 20004: web_sim, real, completed, 8 replies sent); seed spot-check passed. Phone check (#103) done 2026-10-17
 
 ## Overview
 
@@ -113,7 +113,7 @@ Answers are 3.8 per fan, not the ~7 estimated in `docs/metrics.md` (5 questions,
 - **#100** Web chat replies return in the response; unsent > 10 min → marked sent by `expire_unsent`.
 - **#101** Plugin cost = adapter file + its `api/` routes + one wiring line (+ scripts, tests, docs); core/migrations frozen; enforced by test + CI.
 - **#102** Seeded fans on channel `seed`, replies not copied, no `/delete`.
-- **#103** Interviewer gets the public ngrok `/chat` link (plus the Telegram deep link); localhost is presenter-only; phone check moved to the phase 5 rehearsal.
+- **#103** Interviewer gets the public ngrok `/chat` link (plus the Telegram deep link); localhost is presenter-only; phone check done 2026-10-17.
 
 ## Gotchas
 

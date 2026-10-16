@@ -165,3 +165,63 @@ def test_dashboard_settings_hide_secrets_and_demand_the_role() -> None:
         with pytest.raises(ConfigError) as error:
             load_dashboard_settings(environ)
         assert "pw@" not in str(error.value)
+
+
+ANNOUNCEMENT_REFUSED = [
+    "INSERT INTO announcement_requests (city, event_date, status) "
+    "VALUES ('Pune', '2026-12-01', 'fanned_out')",
+    "INSERT INTO announcement_requests (city, event_date, recipients) "
+    "VALUES ('Pune', '2026-12-01', 5)",
+    "INSERT INTO announcement_requests (city, event_date) VALUES ('Pune', '2026-12-01') "
+    "RETURNING id",
+    "UPDATE announcement_requests SET status = 'pending'",
+    "DELETE FROM announcement_requests",
+    "SELECT * FROM announcement_requests",
+    "SELECT * FROM announcement_audience('Pune')",
+]
+
+
+@decision(80, 105, 109)
+def test_role_can_ask_for_an_announcement_and_see_only_the_count(as_role) -> None:  # type: ignore[no-untyped-def]
+    as_role.execute(
+        "INSERT INTO announcement_requests (city, event_date) VALUES ('Pune', '2026-12-01')"
+    )
+    count = as_role.execute("SELECT announcement_audience_count('Pune')").fetchone()
+    assert count is not None and count[0] >= 0
+
+
+@decision(80, 105, 109)
+@pytest.mark.parametrize("statement", ANNOUNCEMENT_REFUSED)
+def test_role_cannot_set_anything_else_on_announcements(as_role, statement: str) -> None:  # type: ignore[no-untyped-def]
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        as_role.execute(statement)
+
+
+@decision(80, 105, 109)
+def test_role_insert_needs_a_read_write_transaction(role_url: str) -> None:
+    with (
+        psycopg.connect(role_url, autocommit=True) as conn,
+        pytest.raises(psycopg.errors.ReadOnlySqlTransaction),
+    ):
+        conn.execute(
+            "INSERT INTO announcement_requests (city, event_date) VALUES ('Pune', '2026-12-01')"
+        )
+
+
+@decision(80, 105, 109)
+def test_role_script_grants_only_the_two_request_columns(
+    pg_migrated_url: str, role_url: str
+) -> None:
+    with psycopg.connect(pg_migrated_url, autocommit=True) as admin:
+        assert dashboard_role.apply(admin, PASSWORD) is False  # rerun keeps the same grants
+        columns = admin.execute(
+            "SELECT column_name, privilege_type FROM information_schema.column_privileges "
+            "WHERE grantee = %s AND table_name = 'announcement_requests' ORDER BY 1, 2",
+            (DASHBOARD_ROLE,),
+        ).fetchall()
+        policies = admin.execute(
+            "SELECT policyname, cmd, roles::text FROM pg_policies "
+            "WHERE tablename = 'announcement_requests'"
+        ).fetchall()
+    assert columns == [("city", "INSERT"), ("event_date", "INSERT")]
+    assert policies == [("dashboard_insert", "INSERT", "{crowdsense_dashboard}")]
