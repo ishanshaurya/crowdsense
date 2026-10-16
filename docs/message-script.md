@@ -21,27 +21,70 @@ Text lives in `core/flow.py` as data. Only #1 is approved; the rest are drafts (
 - **#13** Invalid input · _Bot text: Please tap one of the options._ · _Buttons: repeats options_ · _Status: Draft_
 - **#14** /stop · /delete · /help · _Bot text: You're unsubscribed. · Your data is deleted. · short help_ · _Buttons: —_ · _Status: Draft_
 - **#15** Outbound · _Bot text: Artist X is coming to {city}. Tickets open {date}._ · _Buttons: —_ · _Status: Draft_
-- **#16** Stale tap (toast) · _Bot text: That question has passed._ · _Buttons: —_ · _Status: Draft_
+- **#16** Stale tap (chat message, not a toast) · _Bot text: That question has passed._ · _Buttons: —_ · _Status: Draft_
 - **#17** Tap confirmation · _Bot text: ✓ {choice} (replaces the buttons)_ · _Buttons: —_ · _Status: Draft_
 
 ## 2. Messaging error cheat sheet
 
 What the fan sees and what the system does when messaging goes wrong.
 
-| Situation                                               | Fan sees                                        | System does                                          | Decision |
-| ------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- | -------- |
-| Fan taps a button                                       | Spinner stops at once; buttons become "✓ Pune"  | `answerCallbackQuery`, then `editMessageReplyMarkup` | #92      |
-| Fan double-taps before buttons disappear                | Nothing extra                                   | Second tap is stale (step moved on) → ignored        | #91, #92 |
-| Telegram delivers the same update twice                 | Nothing extra                                   | Same `update_id` → skipped; unsent replies resent    | #90, #55 |
-| Two messages from a brand-new fan at once               | Normal replies, in order                        | Identity lock; second waits                          | #88      |
-| Fan taps an old button from earlier in the chat         | "That question has passed"                      | Ignored; no state change                             | #91      |
-| Fan types text where a tap is expected (or the reverse) | "Please tap one of the options" + buttons again | Same step re-asked                                   | A10      |
-| Tap value not in the current options                    | "Please tap one of the options"                 | Same step; nothing saved                             | #13      |
-| Bug in the engine                                       | "Something went wrong, please tap again" (once) | Rolled back; 200 returned; error logged              | #71      |
-| Database down                                           | Nothing yet; reply arrives after recovery       | 5xx; Telegram retries                                | #71      |
-| Our send to Telegram fails                              | Reply arrives within about 40 s                 | Reply stays `unsent`; sweeper resends                | #72      |
-| Telegram says "too many requests" (429)                 | Reply slightly delayed                          | Wait `retry_after` seconds, then resend              | #69, #93 |
-| Fan has blocked the bot (403)                           | —                                               | Mark the identity opted out; stop sending            | #93      |
-| Fan sent `/stop`                                        | "You're unsubscribed."                          | No more messages, announcements skip them            | #36      |
-| Fan sent `/delete`                                      | "Your data is deleted."                         | All fan rows removed; confirmation not stored        | #81      |
-| Web chat page refreshed                                 | Chat starts over                                | Known limit: new fan created                         | #83      |
+- **Fan taps a button**
+  - Fan sees: Spinner stops at once; buttons become "✓ Pune"
+  - System does: `answerCallbackQuery` (no text), then `editMessageReplyMarkup` once the tap is applied
+  - Decision: #92
+- **Fan double-taps before buttons disappear**
+  - Fan sees: Nothing extra
+  - System does: Second tap is stale (step moved on) → ignored; buttons untouched; the webhook hides the stale reply for 60 s after a confirmed tap
+  - Decision: #91, #92
+- **Telegram delivers the same update twice**
+  - Fan sees: Nothing extra
+  - System does: Same `update_id` → skipped; unsent replies resent
+  - Decision: #90, #55
+- **Two messages from a brand-new fan at once**
+  - Fan sees: Normal replies, in order
+  - System does: Identity lock; second waits
+  - Decision: #88
+- **Fan taps an old button from earlier in the chat**
+  - Fan sees: "That question has passed" (chat message)
+  - System does: Ignored; no state change; buttons untouched
+  - Decision: #91
+- **Fan types text where a tap is expected (or the reverse)**
+  - Fan sees: "Please tap one of the options" + buttons again
+  - System does: Same step re-asked
+  - Decision: A10
+- **Tap value not in the current options**
+  - Fan sees: "Please tap one of the options"
+  - System does: Same step; nothing saved
+  - Decision: #13
+- **Bug in the engine**
+  - Fan sees: "Something went wrong, please tap again" (once)
+  - System does: Rolled back; 200 returned; error logged
+  - Decision: #71
+- **Database down**
+  - Fan sees: Nothing yet; reply arrives after recovery
+  - System does: 5xx; Telegram retries
+  - Decision: #71
+- **Our send to Telegram fails**
+  - Fan sees: Reply arrives within about 40 s
+  - System does: Reply stays `unsent`; sweeper resends
+  - Decision: #72
+- **Telegram says "too many requests" (429)**
+  - Fan sees: Reply slightly delayed
+  - System does: Wait `retry_after` seconds, then resend
+  - Decision: #69, #93
+- **Fan has blocked the bot (403)**
+  - Fan sees: —
+  - System does: Mark the identity opted out and delete that fan's pending unsent replies (one transaction); stop sending
+  - Decision: #93
+- **Fan sent `/stop`**
+  - Fan sees: "You're unsubscribed."
+  - System does: No more messages, announcements skip them
+  - Decision: #36
+- **Fan sent `/delete`**
+  - Fan sees: "Your data is deleted."
+  - System does: All fan rows removed; confirmation not stored
+  - Decision: #81
+- **Web chat page refreshed**
+  - Fan sees: Chat starts over
+  - System does: Known limit: new fan created
+  - Decision: #83

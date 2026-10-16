@@ -1,0 +1,55 @@
+{
+  "update_id": 100000003,
+  "callback_query": {
+    "id": "1000000000000000002",
+    "from": {
+      "id": 1000000001,
+      "is_bot": false,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "language_code": "en"
+    },
+    "message": {
+      "message_id": 103,
+      "from": {
+        "id": 1000000003,
+        "is_bot": true,
+        "first_name": "Crowdsense",
+        "username": "crowdsense_live_bot"
+      },
+      "chat": {
+        "id": 1000000001,
+        "first_name": "Test",
+        "last_name": "User",
+        "username": "test_user",
+        "type": "private"
+      },
+      "date": 1792141102,
+      "text": "Hi! Get updates when Artist X plays near you. Answer a few quick questions so we can plan the right shows. Reply /stop any time to opt out.",
+      "entities": [
+        {
+          "offset": 113,
+          "length": 5,
+          "type": "bot_command"
+        }
+      ],
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "Count me in",
+              "callback_data": "consent:yes"
+            },
+            {
+              "text": "No thanks",
+              "callback_data": "consent:no"
+            }
+          ]
+        ]
+      }
+    },
+    "chat_instance": "-1000000000000000004",
+    "data": "consent:yes"
+  }
+}

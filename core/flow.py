@@ -27,6 +27,7 @@ INVALID_CHOICE_TEXT = "Please tap one of the options."
 STALE_TEXT = "That question has passed."
 STOPPED_TEXT = "You're unsubscribed."
 DELETED_TEXT = "Your data is deleted."
+APOLOGY_TEXT = "Something went wrong, please tap again"  # sent directly, never stored (#71)
 HELP_TEXT = (
     "I ask a few questions so {artist} can plan shows near you. "
     "/stop unsubscribes you, /delete erases everything I stored about you, "

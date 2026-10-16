@@ -4,7 +4,7 @@ Both implementations run the same contract suite. Callers pass every timestamp i
 store never reads the clock (#56).
 """
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime
@@ -26,6 +26,10 @@ SNAPSHOT_COLUMNS = {
 
 class IntegrityViolation(Exception):
     """A CHECK or foreign key rejected a write."""
+
+
+class StoreUnavailable(Exception):
+    """The database cannot be reached; the webhook answers 5xx so the channel retries (#71)."""
 
 
 @dataclass(frozen=True)
@@ -91,10 +95,13 @@ class ReplyRow:
     reply: Reply
     status: str
     ts: datetime
+    external_user_id: str | None = None  # the fan's identity on `channel`, for resends (#72)
 
 
 class Tx(Protocol):
-    async def record_event(self, event: InboundEvent, now: datetime) -> bool:
+    async def record_event(
+        self, event: InboundEvent, now: datetime, fan_id: int | None = None
+    ) -> bool:
         """Insert the inbound event; False when `(channel, external_msg_id)` already exists."""
         ...
 
@@ -114,9 +121,7 @@ class Tx(Protocol):
 
     async def link_event(self, channel: str, external_msg_id: str, fan_id: int) -> None: ...
 
-    async def load_fan(self, fan_id: int) -> FanRow: ...
-
-    async def load_session(self, fan_id: int) -> SessionRow: ...
+    async def load_state(self, fan_id: int) -> tuple[FanRow, SessionRow]: ...
 
     async def record_answer(
         self, fan_id: int, field: str, value: str | None, now: datetime
@@ -144,8 +149,14 @@ class Tx(Protocol):
 
     async def mark_sent(self, reply_ids: Sequence[int]) -> None: ...
 
-    async def claim_unsent(self, older_than: datetime, limit: int) -> list[ReplyRow]:
+    async def claim_unsent(
+        self, older_than: datetime, limit: int, channels: Collection[str] | None = None
+    ) -> list[ReplyRow]:
         """Claim unsent replies no other open transaction holds (`SKIP LOCKED`, #72)."""
+        ...
+
+    async def drop_unsent(self, channel: str, external_user_id: str) -> int:
+        """Delete the identity's unsent replies, so nothing retries a fan who blocked us (#93)."""
         ...
 
     async def bump_funnel(self, step_id: str) -> None: ...
@@ -157,6 +168,12 @@ class Tx(Protocol):
 
 class Store(Protocol):
     def transaction(self) -> AbstractAsyncContextManager[Tx]: ...
+
+    async def ping(self) -> None:
+        """Raise `StoreUnavailable` when the database cannot be reached."""
+        ...
+
+    async def close(self) -> None: ...
 
     async def venues(self) -> list[Venue]: ...
 

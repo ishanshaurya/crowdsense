@@ -1,0 +1,38 @@
+{
+  "update_id": 100000011,
+  "message": {
+    "message_id": 110,
+    "from": {
+      "id": 1000000001,
+      "is_bot": false,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 1000000001,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "type": "private"
+    },
+    "date": 1792141483,
+    "photo": [
+      {
+        "file_id": "FILE1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "file_unique_id": "FILE2XXXXXXXXXXX",
+        "file_size": 570,
+        "width": 90,
+        "height": 62
+      },
+      {
+        "file_id": "FILE3XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "file_unique_id": "FILE4XXXXXXXXXXX",
+        "file_size": 1360,
+        "width": 140,
+        "height": 97
+      }
+    ]
+  }
+}

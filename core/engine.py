@@ -1,16 +1,18 @@
 """One engine turn = one transaction (#55, docs/architecture.md §5).
 
-dedupe -> identity lock (#88) -> load state -> `decide` -> apply writes and log replies -> commit.
-The caller sends the returned replies after the commit and then calls `mark_sent` (#86).
+input caps (#95) -> identity lock (#88) -> dedupe -> load state -> `decide` -> apply writes and
+log replies -> commit. The caller sends the returned replies after the commit and then calls
+`mark_sent` (#86).
 """
 
+import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from core.clock import Clock
 from core.decide import decide
-from core.store import SNAPSHOT_COLUMNS, FanRow, IdentityRow, Store, Tx
+from core.store import SNAPSHOT_COLUMNS, FanRow, IdentityRow, SessionRow, Store, Tx
 from core.types import (
     Decision,
     DeleteFan,
@@ -24,6 +26,18 @@ from core.types import (
     Write,
 )
 
+MAX_TEXT = 1000
+SOURCE_TAG = re.compile(r"[A-Za-z0-9_-]{1,64}")  # Telegram's deep-link rule (#95)
+
+
+def cap_inbound(event: InboundEvent) -> InboundEvent:
+    """Cut text to `MAX_TEXT` characters; drop a source tag that breaks the pattern (#95)."""
+    text = event.text[:MAX_TEXT] if event.text is not None else None
+    tag = event.source_tag
+    if tag is not None and not SOURCE_TAG.fullmatch(tag):
+        tag = None
+    return replace(event, text=text, source_tag=tag)
+
 
 @dataclass(frozen=True)
 class Outgoing:
@@ -35,8 +49,11 @@ class Outgoing:
 
 @dataclass(frozen=True)
 class TurnResult:
+    """`applied` is True when the event changed the fan's state (a stale tap does not, #91)."""
+
     replies: tuple[Outgoing, ...] = ()
     duplicate: bool = False
+    applied: bool = False
 
 
 class Engine:
@@ -56,21 +73,24 @@ class Engine:
         self._simulated = simulated
 
     async def handle(self, event: InboundEvent) -> TurnResult:
+        event = cap_inbound(event)
         now = self._clock.now()
         async with self._store.transaction() as tx:
-            if not await tx.record_event(event, now):
-                rows = await tx.unsent_replies(event.channel, event.external_msg_id)
-                return TurnResult(tuple(Outgoing(r.id, r.reply) for r in rows), duplicate=True)
             identity = await tx.lock_identity(
                 event.channel, event.external_user_id, event.source_tag
             )
+            if not await tx.record_event(event, now, identity.fan_id):
+                rows = await tx.unsent_replies(event.channel, event.external_msg_id)
+                return TurnResult(tuple(Outgoing(r.id, r.reply) for r in rows), duplicate=True)
             fan_id = identity.fan_id
             if fan_id is None:
                 fan_id = await tx.create_fan(
                     event.channel, event.external_user_id, is_simulated=self._simulated, now=now
                 )
-            await tx.link_event(event.channel, event.external_msg_id, fan_id)
-            state = await _load_state(tx, identity, fan_id)
+                await tx.link_event(event.channel, event.external_msg_id, fan_id)
+                state = FanState(consent=identity.consent, opted_out=identity.opted_out)
+            else:
+                state = _state_of(identity, *await tx.load_state(fan_id))
             decision = decide(
                 state,
                 event,
@@ -86,10 +106,17 @@ class Engine:
             async with self._store.transaction() as tx:
                 await tx.mark_sent(ids)
 
+    async def opt_out_blocked(self, channel: str, external_user_id: str) -> int:
+        """The fan blocked the bot (#93): opt the identity out and drop its unsent replies.
 
-async def _load_state(tx: Tx, identity: IdentityRow, fan_id: int) -> FanState:
-    fan = await tx.load_fan(fan_id)
-    session = await tx.load_session(fan_id)
+        One transaction; returns how many replies were dropped.
+        """
+        async with self._store.transaction() as tx:
+            await tx.set_opted_out(channel, external_user_id, True)
+            return await tx.drop_unsent(channel, external_user_id)
+
+
+def _state_of(identity: IdentityRow, fan: FanRow, session: SessionRow) -> FanState:
     return FanState(
         step_id=session.step_id,
         consent=identity.consent,
@@ -117,7 +144,7 @@ async def _apply(
         if state.furthest_step is not None:
             await tx.bump_funnel(state.furthest_step)
         await tx.delete_fan(fan_id)
-        return TurnResult(tuple(Outgoing(None, r) for r in decision.replies))
+        return TurnResult(tuple(Outgoing(None, r) for r in decision.replies), applied=True)
     for write in decision.writes:
         await _write(tx, event, fan_id, write, now)
     await tx.save_progress(fan_id, decision.state.step_id, decision.state.furthest_step, now)
@@ -125,7 +152,8 @@ async def _apply(
         Outgoing(await tx.add_reply(fan_id, event.channel, event.external_msg_id, r, now), r)
         for r in decision.replies
     ]
-    return TurnResult(tuple(outgoing))
+    applied = bool(decision.writes) or decision.state.step_id != state.step_id
+    return TurnResult(tuple(outgoing), applied=applied)
 
 
 async def _write(tx: Tx, event: InboundEvent, fan_id: int, write: Write, now: datetime) -> None:

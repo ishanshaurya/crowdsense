@@ -19,6 +19,7 @@ dev = [
     "detect-secrets>=1.5.0",
     "import-linter>=2.15",
     "mypy>=2.4.0",
+    "pip-audit>=2.10.1",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -46,7 +47,7 @@ max-complexity = 10
 
 [tool.mypy]
 python_version = "3.12"
-files = ["core"]
+files = ["core", "adapters", "api"]
 strict = true
 
 [tool.pytest.ini_options]
@@ -78,6 +79,12 @@ name = "adapters import nothing from api, dashboard"
 type = "forbidden"
 source_modules = ["adapters"]
 forbidden_modules = ["api", "dashboard"]
+
+[[tool.importlinter.contracts]]
+name = "adapters only translate: no flow, engine or store (Q-11)"
+type = "forbidden"
+source_modules = ["adapters"]
+forbidden_modules = ["core.flow", "core.engine", "core.decide", "core.store", "core.store_memory", "core.store_postgres"]
 
 [[tool.importlinter.contracts]]
 name = "dashboard uses only the store and insights from core"

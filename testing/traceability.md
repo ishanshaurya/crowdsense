@@ -54,10 +54,10 @@ Every decision in `docs/decisions.md` that has behaviour should map to at least 
 | 88 | Identity lock for new fans | P1-S02, P1-S08 |
 | 90 | Telegram dedupe on `update_id` | P2-U09, P2-U11, P2-C03 |
 | 91 | Stale taps ignored | P1-U34, P2-U11, P2-C09, P2-C10 |
-| 92 | Answer tap at once, replace buttons | P2-C11 |
+| 92 | Answer tap at once, replace buttons, hide double-tap reply | P2-C09, P2-C11, P2-C17 |
 | 93 | 429 and 403 handling | P2-C12, P2-C13 |
 | 94 | Interest question removed | P1-U12 |
-| 95 | Input caps: text 1,000 chars, source tag pattern, DB length limits (pending in `docs/decisions.md`) | P2-U12, P2-C14, P2-C15, P2-C16 |
+| 95 | Input caps: text 1,000 chars, source tag pattern, DB length limits | P2-U12, P2-C14, P2-C15, P2-C16 |
 | 60 | Password gate; emails hidden by default | P4-U11, P6-C08 |
 
 ## Gaps to watch

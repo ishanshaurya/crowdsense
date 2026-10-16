@@ -19,6 +19,11 @@ Why we decided what we decided. Use it to answer "why did you do it this way?"
 8. [Full doc scan](#8-full-doc-scan)
 9. [Double taps: lessons from established bots](#9-double-taps-lessons-from-established-bots)
 10. [Interest question removed](#10-interest-question-removed)
+11. [Stale tap: chat message, not a toast](#11-stale-tap-chat-message-not-a-toast)
+12. [Blocked bot: delete pending replies](#12-blocked-bot-delete-pending-replies)
+13. [Double tap vs stale tap](#13-double-tap-vs-stale-tap)
+14. [Phase 2 wrap-up decisions](#14-phase-2-wrap-up-decisions)
+15. [Input caps: what and why](#15-input-caps-what-and-why)
 
 ---
 
@@ -447,7 +452,7 @@ Researched 2026-10-16. Decisions #90 to #93. Fan-facing rules: `docs/message-scr
 ### What we added, in simple terms
 
 - **L1 · Receipt number (#90).** Every Telegram message and tap gets an `update_id`, never reused. A repeat with the same number is ignored. Before, button taps had no reliable id.
-- **L2 · Buttons know their question (#91).** A button carries "city:Pune", not just "Pune". If the fan taps a button from an older question, the bot says "That question has passed" and changes nothing.
+- **L2 · Buttons know their question (#91).** A button carries "city:Pune", not just "Pune". If the fan taps a button from an older question, the bot sends a chat message (not a toast, see §11) saying "That question has passed" and changes nothing.
 - **L3 · Buttons vanish after a tap (#92).** The spinner stops at once and the buttons become "✓ Pune", so there is nothing left to tap twice.
 - **Extra · Telegram errors (#93).** 429 "too many requests" → wait the time Telegram gives, then resend. 403 "bot blocked" → stop messaging that fan.
 
@@ -488,4 +493,107 @@ Decision #94. Supersedes #34 and #35.
 - **Numbers kept:** #34 and #35 stay in `decisions.md`, struck through, because code and tests cite them. Message script row #9 is marked removed, like timing (#8).
 - **Still to do (code, not docs):** remove the step, field and tests; drop the `interest` column. See "Interest removal" steps in the conversation plan: `core/catalog.py`, `flow.py`, `types.py`, `store*.py`, `migrations/0001`, the `tests/` files and the YAML scenarios `happy_path_pune`, `returning_fan_edit`, `insights_cases`.
 - **Left alone:** the English word "interest" in the PRD ("measure interest before booking venues").
+
+---
+
+## 11. Stale tap: chat message, not a toast
+
+Raised by the phase 2 build chat on 2026-10-16. Clarifies #91 and #92 in place (no new number).
+
+- **Issue:** `P2-C10` said a stale tap shows a "That question has passed" toast, but #92 says answer the tap first. A tap can be answered only once, and only the engine knows a tap is stale, so both could not hold.
+- **Options:**
+  1. Answer first with no text; the stale reply is a normal chat message.
+  2. Run the engine first, then answer with the toast text.
+- **Chosen:** 1.
+- **Why:**
+  - Keeps the spinner stopping at once, which is what stops fans double-tapping (#92).
+  - Option 2 makes the spinner wait for the whole turn (about 50 to 300 ms, more over Supabase).
+  - Cost: one extra line in the chat for a stale tap.
+- **Also decided:** the buttons become "✓ <choice>" only when the engine applied the tap. A stale tap leaves them alone, so a fast tap on a different button never shows a wrong ✓.
+- **Docs updated:** #91, #92, `docs/architecture.md` §3 and §5, `docs/message-script.md` (row #16 and the cheat sheet), tests `P2-C09`, `P2-C10`, `P2-C11`.
+
+---
+
+## 12. Blocked bot: delete pending replies
+
+Raised by the phase 2 build chat on 2026-10-16. Clarifies #93 in place (no new number).
+
+- **Issue:** when a fan blocks the bot, Telegram answers every send with 403. Their pending `unsent` replies would be retried by the sweeper forever.
+- **Options:**
+  1. Delete those rows in the same transaction that marks the identity opted out.
+  2. Add a `dropped` status (needs `0003` to widen the status CHECK) and mark them.
+- **Chosen:** 1.
+- **Why:**
+  - An undeliverable reply is not worth storing (same reasoning as #81).
+  - No extra schema change in migration `0003`.
+  - The fact is still recorded: the opted-out flag, plus a log line with the number of replies dropped.
+- **Cost:** no audit trail of dropped replies. The "lost replies = 0" metric means lost by a bug, so a deliberate drop does not break it.
+- **Docs updated:** #93, `docs/architecture.md` §5 failures, `docs/message-script.md` cheat sheet, test `P2-C13`.
+
+---
+
+## 13. Double tap vs stale tap
+
+Raised by the phase 2 build chat on 2026-10-16. Clarifies #92 in place (no new number).
+
+- **Issue:** the engine treats the second tap of a double tap as a stale tap and replies "That question has passed", which is right for an old button (`P2-C10`) but not for a double tap (`P2-C09` wants nothing extra). The core cannot tell them apart.
+- **Options:**
+  1. The webhook remembers, in process memory for 60 s, the messages it just confirmed with "✓". A stale tap on one of them is a double tap; its stale reply is marked sent and not delivered. About 20 lines, no core change.
+  2. Accept the extra message and relax `P2-C09`.
+- **Chosen:** 1.
+- **Why:**
+  - A confirmed message has no buttons left, so any tap on it in that window is a repeat.
+  - A clean double tap is the point of #91 and #92.
+  - Single process on a laptop, so in-memory state is enough.
+- **Cost:** after a restart inside the 60 s window, one extra "passed" message. Accepted.
+- **Docs updated:** #92, `docs/architecture.md` §3 and §5, `docs/message-script.md` cheat sheet, tests `P2-C09` and new `P2-C17`.
+
+---
+
+## 14. Phase 2 wrap-up decisions
+
+From the phase 2 build report, 2026-10-16.
+
+- **Missing recordings (#96):** sticker and group updates were never recorded. Decision: leave them. A sticker takes the same "no text" path as the photo; the group and `/help@bot` cases are derived from recorded fixtures.
+- **Database port (#97):** the webhook uses the session pooler (5432) for now; move to the transaction pooler (6543) in the last phase.
+  - **Is it safe to switch later?** Checked on Supabase with every write rolled back. On both ports: the pool opens, 8 repeated queries work (`prepare_threshold=None`), `FOR UPDATE SKIP LOCKED` skips a row held by another transaction, and `INSERT ... ON CONFLICT` plus `SELECT ... FOR UPDATE` works in one transaction. The code uses no session-level features (no advisory locks, `SET`, `LISTEN`, temp tables).
+  - **What the switch needs:** change `DATABASE_URL`, and keep migrations on 5432 through an optional `MIGRATION_DATABASE_URL` (Alembic does DDL and must not go through the transaction pooler).
+- **Latency numbers:** the Supabase per-turn estimate (about 180 ms) stays an estimate until measured live. Test later.
+- **Open:** the 200-character cap on `venue_note` and `email` (see the conversation) and the 503 that Telegram reported on a real message.
+
+---
+
+## 15. Input caps: what and why
+
+Decisions #95 and #98. A security and scaling measure.
+
+**What we limit:**
+
+- **Message text: 1,000 characters.** Cut by the engine before it is saved or decided on.
+- **`source_tag`: 64 characters, letters, digits, `_` and `-` only.** Anything else is stored as "no tag" and the fan still gets in.
+- **`venue_note` and `email`: 200 characters.** Enforced by the database (migration 0003), as a last line of defence.
+
+**Why (security):**
+
+- Anyone can type anything. Telegram allows 4,096 characters per message, and the phase 3 web chat has no limit at all.
+- The source tag is shown on the dashboard. The strict alphabet keeps `<script>` or junk out of it.
+- The database limit still holds if a code bug lets long text through.
+
+**Why (scaling):**
+
+- Unlimited text lets one person bloat the database and slow every dashboard query.
+- With caps, row sizes are bounded, so storage and query cost per fan stay predictable. About 20,000 fans fit the free tier (see `docs/metrics.md`).
+
+**Why in the core and the database, not in each channel:**
+
+- Every channel gets the same limits, including the web chat in phase 3.
+- Phase 3 may not change `core/` or the schema (Q-15), so the caps had to land in phase 2.
+
+**Why 200 for `venue_note` and `email` (#98):**
+
+- Real emails are under 100 characters. The technical maximum is 254.
+- 200 matches the flow's own validators, so the database never rejects something the flow accepted.
+- Raising email to 254 would need another migration and protects almost nobody.
+
+**Tests:** `P2-C14` (oversized message), `P2-C15` (database limits), `P2-C16` (the migration on a database with rows), `P2-U12` (source tag).
 

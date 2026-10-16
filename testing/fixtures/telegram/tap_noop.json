@@ -1,0 +1,45 @@
+{
+  "update_id": 100000005,
+  "callback_query": {
+    "id": "1000000000000000006",
+    "from": {
+      "id": 1000000001,
+      "is_bot": false,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "language_code": "en"
+    },
+    "message": {
+      "message_id": 105,
+      "from": {
+        "id": 1000000003,
+        "is_bot": true,
+        "first_name": "Crowdsense",
+        "username": "crowdsense_live_bot"
+      },
+      "chat": {
+        "id": 1000000001,
+        "first_name": "Test",
+        "last_name": "User",
+        "username": "test_user",
+        "type": "private"
+      },
+      "date": 1792141300,
+      "edit_date": 1792141302,
+      "text": "How many people are coming?",
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "✓ 6+",
+              "callback_data": "noop"
+            }
+          ]
+        ]
+      }
+    },
+    "chat_instance": "-1000000000000000004",
+    "data": "noop"
+  }
+}

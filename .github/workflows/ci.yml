@@ -25,9 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - run: uv lock --check
       - run: uv sync --locked
       - run: uv run ruff check . && uv run ruff format --check .
-      - run: uv run mypy core
+      - run: uv run mypy
+      - run: uv run pip-audit --skip-editable
       - run: uv run lint-imports
       - run: uv run detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
       - run: >-

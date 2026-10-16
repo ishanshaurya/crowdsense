@@ -1,10 +1,12 @@
 """Postgres store (psycopg 3, parameterised SQL only).
 
 Every query is a string literal (`LiteralString`), so mypy rejects any query built from data.
-One connection per transaction; pooling arrives with the webhook (#67).
+Connections come from an async pool with `prepare_threshold=None`, which the Supabase
+transaction pooler needs (#67). A turn is about eight round trips: writes that touch two
+tables share one statement through a CTE.
 """
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Collection, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, LiteralString
@@ -12,6 +14,7 @@ from typing import Any, LiteralString
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+from psycopg_pool import AsyncConnectionPool
 
 from core.catalog import Venue
 from core.flow import FLOW_ID
@@ -23,6 +26,7 @@ from core.store import (
     IntegrityViolation,
     ReplyRow,
     SessionRow,
+    StoreUnavailable,
     Tx,
     event_payload,
     reply_from_json,
@@ -30,43 +34,78 @@ from core.store import (
 )
 from core.types import InboundEvent, Reply
 
-_SELECT_FANS: LiteralString = (
-    "SELECT id, city, venue_id, venue_note, budget_band, group_size, email, "
-    "is_simulated, completed_at, furthest_step, created_at, last_seen FROM fans"
+_FAN_COLUMNS: LiteralString = (
+    "id, city, venue_id, venue_note, budget_band, group_size, email, "
+    "is_simulated, completed_at, furthest_step, created_at, last_seen"
+)
+_SELECT_FANS: LiteralString = "SELECT " + _FAN_COLUMNS + " FROM fans"
+_SELECT_STATE: LiteralString = (
+    "SELECT " + _FAN_COLUMNS + ", s.flow_id, s.step_id, s.updated_at "
+    "FROM fans f JOIN sessions s ON s.fan_id = f.id WHERE f.id = %s"
 )
 _SELECT_IDENTITIES: LiteralString = (
     "SELECT channel, external_user_id, fan_id, source_tag, consent, opted_out, "
     "can_message_until FROM identities"
 )
 _SELECT_REPLIES: LiteralString = (
-    "SELECT id, fan_id, channel, external_msg_id, payload, status, ts FROM replies"
+    "SELECT r.id, r.fan_id, r.channel, r.external_msg_id, r.payload, r.status, r.ts, "
+    "i.external_user_id FROM replies r "
+    "LEFT JOIN identities i ON i.fan_id = r.fan_id AND i.channel = r.channel"
 )
 
+# One statement appends to `answers` and overwrites the snapshot column (#12).
+_ANSWER: LiteralString = (
+    "WITH a AS (INSERT INTO answers (fan_id, field, value, ts) VALUES (%s, %s, %s, %s)) "
+)
 _SET_SNAPSHOT: dict[str, LiteralString] = {
-    "city": "UPDATE fans SET city = %s WHERE id = %s",
-    "venue": "UPDATE fans SET venue_id = %s WHERE id = %s",
-    "venue_note": "UPDATE fans SET venue_note = %s WHERE id = %s",
-    "budget_band": "UPDATE fans SET budget_band = %s WHERE id = %s",
-    "group_size": "UPDATE fans SET group_size = %s WHERE id = %s",
-    "email": "UPDATE fans SET email = %s WHERE id = %s",
+    "city": _ANSWER + "UPDATE fans SET city = %s WHERE id = %s",
+    "venue": _ANSWER + "UPDATE fans SET venue_id = %s WHERE id = %s",
+    "venue_note": _ANSWER + "UPDATE fans SET venue_note = %s WHERE id = %s",
+    "budget_band": _ANSWER + "UPDATE fans SET budget_band = %s WHERE id = %s",
+    "group_size": _ANSWER + "UPDATE fans SET group_size = %s WHERE id = %s",
+    "email": _ANSWER + "UPDATE fans SET email = %s WHERE id = %s",
 }
 
 
 class PostgresStore:
-    def __init__(self, dsn: str) -> None:
-        self._dsn = dsn
+    """Opens its pool on first use; `close()` it on shutdown."""
+
+    def __init__(
+        self, dsn: str, *, min_size: int = 1, max_size: int = 10, timeout: float = 5.0
+    ) -> None:
+        self._pool = AsyncConnectionPool(
+            dsn,
+            min_size=min_size,
+            max_size=max_size,
+            timeout=timeout,
+            kwargs={"prepare_threshold": None},
+            open=False,
+        )
+
+    @asynccontextmanager
+    async def _connection(self) -> AsyncIterator[psycopg.AsyncConnection[Any]]:
+        try:
+            await self._pool.open()
+            async with self._pool.connection() as conn:
+                yield conn
+        except psycopg.OperationalError as exc:  # includes PoolTimeout
+            raise StoreUnavailable(type(exc).__name__) from exc
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[Tx]:
-        connection = await psycopg.AsyncConnection.connect(self._dsn, prepare_threshold=None)
-        async with connection as conn, conn.transaction():
+        async with self._connection() as conn, conn.transaction():
             yield _PgTx(conn)
 
+    async def ping(self) -> None:
+        async with self._connection() as conn:
+            await conn.execute("SELECT 1")
+
+    async def close(self) -> None:
+        await self._pool.close()
+
     async def _read(self, query: LiteralString) -> list[dict[str, Any]]:
-        async with await psycopg.AsyncConnection.connect(
-            self._dsn, prepare_threshold=None, row_factory=dict_row
-        ) as conn:
-            cursor = await conn.execute(query)
+        async with self._connection() as conn:
+            cursor = await conn.cursor(row_factory=dict_row).execute(query)
             return await cursor.fetchall()
 
     async def venues(self) -> list[Venue]:
@@ -96,7 +135,7 @@ class PostgresStore:
         return [EventRow(**row) for row in rows]
 
     async def replies(self) -> list[ReplyRow]:
-        rows = await self._read(_SELECT_REPLIES + " ORDER BY id")
+        rows = await self._read(_SELECT_REPLIES + " ORDER BY r.id")
         return [_reply_row(row) for row in rows]
 
     async def funnel_counts(self) -> dict[str, int]:
@@ -113,7 +152,12 @@ def _reply_row(row: dict[str, Any]) -> ReplyRow:
         reply=reply_from_json(row["payload"]),
         status=row["status"],
         ts=row["ts"],
+        external_user_id=row["external_user_id"],
     )
+
+
+def _fan_row(row: dict[str, Any]) -> FanRow:
+    return FanRow(**{k: row[k] for k in FanRow.__dataclass_fields__})
 
 
 class _PgTx:
@@ -130,18 +174,21 @@ class _PgTx:
             raise IntegrityViolation(str(exc)) from exc
         return cursor
 
-    async def record_event(self, event: InboundEvent, now: datetime) -> bool:
+    async def record_event(
+        self, event: InboundEvent, now: datetime, fan_id: int | None = None
+    ) -> bool:
         cursor = await self._run(
-            "INSERT INTO events (channel, external_msg_id, direction, payload, ts) "
-            "VALUES (%s, %s, 'in', %s, %s) ON CONFLICT DO NOTHING",
-            (event.channel, event.external_msg_id, Jsonb(event_payload(event)), now),
+            "INSERT INTO events (channel, external_msg_id, fan_id, direction, payload, ts) "
+            "VALUES (%s, %s, %s, 'in', %s, %s) ON CONFLICT DO NOTHING",
+            (event.channel, event.external_msg_id, fan_id, Jsonb(event_payload(event)), now),
         )
         return cursor.rowcount == 1
 
     async def unsent_replies(self, channel: str, external_msg_id: str) -> list[ReplyRow]:
         cursor = await self._run(
             _SELECT_REPLIES
-            + " WHERE channel = %s AND external_msg_id = %s AND status = 'unsent' ORDER BY id",
+            + " WHERE r.channel = %s AND r.external_msg_id = %s AND r.status = 'unsent'"
+            + " ORDER BY r.id",
             (channel, external_msg_id),
         )
         return [_reply_row(row) for row in await cursor.fetchall()]
@@ -149,35 +196,33 @@ class _PgTx:
     async def lock_identity(
         self, channel: str, external_user_id: str, source_tag: str | None
     ) -> IdentityRow:
-        await self._run(
-            "INSERT INTO identities (channel, external_user_id, source_tag) "
-            "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-            (channel, external_user_id, source_tag),
-        )
-        cursor = await self._run(
-            _SELECT_IDENTITIES + " WHERE channel = %s AND external_user_id = %s FOR UPDATE",
-            (channel, external_user_id),
-        )
-        return IdentityRow(**(await cursor.fetchone() or {}))
+        # Known fans need one round trip. A new one is inserted first (#88); a second turn
+        # for the same new fan blocks on that insert until the first commits.
+        query = _SELECT_IDENTITIES + " WHERE channel = %s AND external_user_id = %s FOR UPDATE"
+        row = await (await self._run(query, (channel, external_user_id))).fetchone()
+        if row is None:
+            await self._run(
+                "INSERT INTO identities (channel, external_user_id, source_tag) "
+                "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                (channel, external_user_id, source_tag),
+            )
+            row = await (await self._run(query, (channel, external_user_id))).fetchone()
+        return IdentityRow(**(row or {}))
 
     async def create_fan(
         self, channel: str, external_user_id: str, *, is_simulated: bool, now: datetime
     ) -> int:
         cursor = await self._run(
-            "INSERT INTO fans (is_simulated, created_at, last_seen) VALUES (%s, %s, %s) "
-            "RETURNING id",
-            (is_simulated, now, now),
+            "WITH f AS (INSERT INTO fans (is_simulated, created_at, last_seen) "
+            "VALUES (%s, %s, %s) RETURNING id), "
+            "s AS (INSERT INTO sessions (fan_id, flow_id, step_id, updated_at) "
+            "SELECT id, %s, 'consent', %s FROM f), "
+            "i AS (UPDATE identities SET fan_id = (SELECT id FROM f) "
+            "WHERE channel = %s AND external_user_id = %s) "
+            "SELECT id FROM f",
+            (is_simulated, now, now, FLOW_ID, now, channel, external_user_id),
         )
         fan_id: int = (await cursor.fetchone() or {})["id"]
-        await self._run(
-            "INSERT INTO sessions (fan_id, flow_id, step_id, updated_at) "
-            "VALUES (%s, %s, 'consent', %s)",
-            (fan_id, FLOW_ID, now),
-        )
-        await self._run(
-            "UPDATE identities SET fan_id = %s WHERE channel = %s AND external_user_id = %s",
-            (fan_id, channel, external_user_id),
-        )
         return fan_id
 
     async def link_event(self, channel: str, external_msg_id: str, fan_id: int) -> None:
@@ -186,28 +231,20 @@ class _PgTx:
             (fan_id, channel, external_msg_id),
         )
 
-    async def load_fan(self, fan_id: int) -> FanRow:
-        cursor = await self._run(_SELECT_FANS + " WHERE id = %s", (fan_id,))
-        return FanRow(**(await cursor.fetchone() or {}))
-
-    async def load_session(self, fan_id: int) -> SessionRow:
-        cursor = await self._run(
-            "SELECT fan_id, flow_id, step_id, updated_at FROM sessions WHERE fan_id = %s",
-            (fan_id,),
-        )
-        return SessionRow(**(await cursor.fetchone() or {}))
+    async def load_state(self, fan_id: int) -> tuple[FanRow, SessionRow]:
+        # A separate statement after the identity lock, so it reads rows committed while
+        # this turn waited for the lock.
+        row = await (await self._run(_SELECT_STATE, (fan_id,))).fetchone() or {}
+        session = SessionRow(row["id"], row["flow_id"], row["step_id"], row["updated_at"])
+        return _fan_row(row), session
 
     async def record_answer(
         self, fan_id: int, field: str, value: str | None, now: datetime
     ) -> None:
         if field not in _SET_SNAPSHOT:
             raise IntegrityViolation(f"unknown answer field {field!r}")
-        await self._run(
-            "INSERT INTO answers (fan_id, field, value, ts) VALUES (%s, %s, %s, %s)",
-            (fan_id, field, value, now),
-        )
         stored = int(value) if field == "venue" and value is not None else value
-        await self._run(_SET_SNAPSHOT[field], (stored, fan_id))
+        await self._run(_SET_SNAPSHOT[field], (fan_id, field, value, now, stored, fan_id))
 
     async def set_consent(self, channel: str, external_user_id: str, value: bool | None) -> None:
         await self._run(
@@ -225,12 +262,9 @@ class _PgTx:
         self, fan_id: int, step_id: str, furthest_step: str | None, now: datetime
     ) -> None:
         await self._run(
-            "UPDATE sessions SET step_id = %s, updated_at = %s WHERE fan_id = %s",
-            (step_id, now, fan_id),
-        )
-        await self._run(
+            "WITH s AS (UPDATE sessions SET step_id = %s, updated_at = %s WHERE fan_id = %s) "
             "UPDATE fans SET furthest_step = %s, last_seen = %s WHERE id = %s",
-            (furthest_step, now, fan_id),
+            (step_id, now, fan_id, furthest_step, now, fan_id),
         )
 
     async def mark_completed(self, fan_id: int, at: datetime) -> None:
@@ -253,14 +287,27 @@ class _PgTx:
     async def mark_sent(self, reply_ids: Sequence[int]) -> None:
         await self._run("UPDATE replies SET status = 'sent' WHERE id = ANY(%s)", (list(reply_ids),))
 
-    async def claim_unsent(self, older_than: datetime, limit: int) -> list[ReplyRow]:
+    async def claim_unsent(
+        self, older_than: datetime, limit: int, channels: Collection[str] | None = None
+    ) -> list[ReplyRow]:
+        wanted = None if channels is None else list(channels)
         cursor = await self._run(
             _SELECT_REPLIES
-            + " WHERE status = 'unsent' AND ts < %s ORDER BY id LIMIT %s"
-            + " FOR UPDATE SKIP LOCKED",
-            (older_than, limit),
+            + " WHERE r.status = 'unsent' AND r.ts < %s"
+            + " AND (%s::text[] IS NULL OR r.channel = ANY(%s::text[]))"
+            + " ORDER BY r.id LIMIT %s FOR UPDATE OF r SKIP LOCKED",
+            (older_than, wanted, wanted, limit),
         )
         return [_reply_row(row) for row in await cursor.fetchall()]
+
+    async def drop_unsent(self, channel: str, external_user_id: str) -> int:
+        cursor = await self._run(
+            "DELETE FROM replies r USING identities i "
+            "WHERE i.channel = %s AND i.external_user_id = %s "
+            "AND r.fan_id = i.fan_id AND r.channel = i.channel AND r.status = 'unsent'",
+            (channel, external_user_id),
+        )
+        return cursor.rowcount
 
     async def bump_funnel(self, step_id: str) -> None:
         await self._run(

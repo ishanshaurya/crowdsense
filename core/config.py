@@ -1,7 +1,11 @@
-"""Validated settings (#63); the names are listed in `.env.example`."""
+"""Validated settings (#63); the names are listed in `.env.example`.
 
+Error messages name the variable, never its value.
+"""
+
+import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 DEFAULT_ARTIST_NAME = "Artist X"
 
@@ -22,3 +26,33 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         raise ConfigError("DATABASE_URL must be set to a postgresql:// URL")
     artist_name = environ.get("ARTIST_NAME", "").strip() or DEFAULT_ARTIST_NAME
     return Settings(database_url=database_url, artist_name=artist_name)
+
+
+_BOT_TOKEN = re.compile(r"\d{5,}:[A-Za-z0-9_-]{30,}")
+_WEBHOOK_SECRET = re.compile(r"[A-Za-z0-9_-]{16,256}")  # Telegram allows 1-256 of these
+
+
+@dataclass(frozen=True)
+class TelegramSettings:
+    """Webhook service only. Secrets are left out of `repr`, so they never reach a log."""
+
+    bot_token: str = field(repr=False)
+    webhook_secret: str = field(repr=False)
+    public_url: str
+
+    @property
+    def webhook_url(self) -> str:
+        return f"{self.public_url}/hook/telegram"
+
+
+def load_telegram_settings(environ: Mapping[str, str]) -> TelegramSettings:
+    token = environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    if not _BOT_TOKEN.fullmatch(token):
+        raise ConfigError("TELEGRAM_BOT_TOKEN must be set to the token from BotFather")
+    secret = environ.get("TELEGRAM_WEBHOOK_SECRET", "").strip()
+    if not _WEBHOOK_SECRET.fullmatch(secret):
+        raise ConfigError("TELEGRAM_WEBHOOK_SECRET must be 16-256 characters of A-Z a-z 0-9 _ -")
+    public_url = environ.get("PUBLIC_URL", "").strip().rstrip("/")
+    if not re.fullmatch(r"https://[A-Za-z0-9.-]+(:\d+)?", public_url):
+        raise ConfigError("PUBLIC_URL must be an https:// origin with no path")
+    return TelegramSettings(bot_token=token, webhook_secret=secret, public_url=public_url)

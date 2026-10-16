@@ -12,17 +12,29 @@ repos:
         language: system
         types: [python]
       - id: mypy-core
-        name: mypy (strict, core/)
-        entry: uv run mypy core
+        name: mypy (strict, core/ adapters/ api/)
+        entry: uv run mypy
         language: system
         pass_filenames: false
-        files: ^(core/|pyproject\.toml)
+        files: ^(core/|adapters/|api/|pyproject\.toml)
       - id: import-linter
         name: import-linter contracts
         entry: uv run lint-imports
         language: system
         pass_filenames: false
         types: [python]
+      - id: uv-lock-check
+        name: uv.lock is current (Q-13)
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+      - id: pip-audit
+        name: pip-audit (Q-13)
+        entry: uv run pip-audit --skip-editable
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
       - id: detect-secrets
         name: detect-secrets
         entry: uv run detect-secrets-hook --baseline .secrets.baseline

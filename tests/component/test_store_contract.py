@@ -208,3 +208,53 @@ def test_p1_c11_every_contract_test_runs_on_both_backends(request: pytest.Fixtur
     for name in names:
         backends = {i.callspec.params["store"] for i in contract if i.originalname == name}
         assert backends == {"memory", "postgres"}, name
+
+
+@decision(55)
+async def test_event_can_be_recorded_with_its_fan(store: Store) -> None:
+    fan_id = await new_fan(store)
+    async with store.transaction() as tx:
+        assert await tx.record_event(event("text", msg_id="m1"), NOW, fan_id)
+        fan, session = await tx.load_state(fan_id)
+    assert (fan.id, session.fan_id, session.step_id) == (fan_id, fan_id, "consent")
+    assert [e.fan_id for e in await store.events()] == [fan_id]
+
+
+@decision(72)
+async def test_replies_carry_the_identity_and_claims_filter_by_channel(store: Store) -> None:
+    fan_id = await new_fan(store, "chat-7")
+    async with store.transaction() as tx:
+        await tx.record_event(event("start", msg_id="m1"), NOW, fan_id)
+        await tx.record_event(event("start", msg_id="w1", channel="web_sim"), NOW)
+        tg = await tx.add_reply(fan_id, "telegram", "m1", _reply(), NOW)
+        await tx.add_reply(fan_id, "web_sim", "w1", _reply(), NOW)
+    later = NOW + timedelta(seconds=30)
+    async with store.transaction() as tx:
+        claimed = await tx.claim_unsent(later, 10, channels={"telegram"})
+        assert [(r.id, r.external_user_id) for r in claimed] == [(tg, "chat-7")]
+        (unsent,) = await tx.unsent_replies("telegram", "m1")
+        assert unsent.external_user_id == "chat-7"
+    by_channel = {r.channel: r.external_user_id for r in await store.replies()}
+    assert by_channel == {"telegram": "chat-7", "web_sim": None}
+
+
+@decision(93)
+async def test_drop_unsent_removes_only_that_identitys_unsent_replies(store: Store) -> None:
+    mine, other = await new_fan(store, "u1"), await new_fan(store, "u2")
+    async with store.transaction() as tx:
+        await tx.record_event(event("start", msg_id="m1"), NOW, mine)
+        await tx.record_event(event("start", msg_id="m2", user="u2"), NOW, other)
+        sent = await tx.add_reply(mine, "telegram", "m1", _reply(), NOW)
+        await tx.mark_sent([sent])
+        await tx.add_reply(mine, "telegram", "m1", _reply(), NOW)
+        kept = await tx.add_reply(other, "telegram", "m2", _reply(), NOW)
+    async with store.transaction() as tx:
+        assert await tx.drop_unsent("telegram", "u1") == 1
+        assert await tx.drop_unsent("telegram", "nobody") == 0
+        await tx.set_opted_out("telegram", "nobody", True)
+    assert sorted(r.id for r in await store.replies()) == [sent, kept]
+
+
+@decision(71)
+async def test_ping_succeeds_on_a_reachable_store(store: Store) -> None:
+    await store.ping()

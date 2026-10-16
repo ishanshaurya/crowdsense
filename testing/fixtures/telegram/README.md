@@ -10,7 +10,7 @@ One file per case, named for the case, for example `start_with_tag.json`.
 - an inline button tap (callback query)
 - a plain text message
 - `/stop`, `/delete`, `/help`
-- an update type the bot does not handle: edited message, photo, sticker, a message from a group
+- an update type the bot does not handle: edited message, photo, sticker, a message from a group (sticker and group are not recorded for now, #96; the tests derive them)
 
 ## How to record
 

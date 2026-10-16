@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections.abc import AsyncIterator
 from urllib.parse import quote
 
 import pytest
@@ -60,10 +61,13 @@ def pg_migrated_url(pg_url: str) -> str:
 
 
 @pytest.fixture(params=["memory", "postgres"])
-def store(request: pytest.FixtureRequest) -> Store:
+async def store(request: pytest.FixtureRequest) -> AsyncIterator[Store]:
     if request.param == "memory":
-        return InMemoryStore()
-    return PostgresStore(request.getfixturevalue("pg_migrated_url"))
+        backend: Store = InMemoryStore()
+    else:
+        backend = PostgresStore(request.getfixturevalue("pg_migrated_url"))
+    yield backend
+    await backend.close()
 
 
 @pytest.fixture

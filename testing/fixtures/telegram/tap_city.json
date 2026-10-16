@@ -1,0 +1,88 @@
+{
+  "update_id": 100000004,
+  "callback_query": {
+    "id": "1000000000000000005",
+    "from": {
+      "id": 1000000001,
+      "is_bot": false,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "language_code": "en"
+    },
+    "message": {
+      "message_id": 104,
+      "from": {
+        "id": 1000000003,
+        "is_bot": true,
+        "first_name": "Crowdsense",
+        "username": "crowdsense_live_bot"
+      },
+      "chat": {
+        "id": 1000000001,
+        "first_name": "Test",
+        "last_name": "User",
+        "username": "test_user",
+        "type": "private"
+      },
+      "date": 1792141106,
+      "text": "Which city are you in?",
+      "reply_markup": {
+        "inline_keyboard": [
+          [
+            {
+              "text": "Mumbai",
+              "callback_data": "city:Mumbai"
+            },
+            {
+              "text": "Delhi NCR",
+              "callback_data": "city:Delhi NCR"
+            }
+          ],
+          [
+            {
+              "text": "Bengaluru",
+              "callback_data": "city:Bengaluru"
+            },
+            {
+              "text": "Hyderabad",
+              "callback_data": "city:Hyderabad"
+            }
+          ],
+          [
+            {
+              "text": "Pune",
+              "callback_data": "city:Pune"
+            },
+            {
+              "text": "Kolkata",
+              "callback_data": "city:Kolkata"
+            }
+          ],
+          [
+            {
+              "text": "Chennai",
+              "callback_data": "city:Chennai"
+            },
+            {
+              "text": "Ahmedabad",
+              "callback_data": "city:Ahmedabad"
+            }
+          ],
+          [
+            {
+              "text": "Jaipur",
+              "callback_data": "city:Jaipur"
+            },
+            {
+              "text": "Indore",
+              "callback_data": "city:Indore"
+            }
+          ]
+        ]
+      }
+    },
+    "chat_instance": "-1000000000000000004",
+    "data": "city:Pune"
+  }
+}

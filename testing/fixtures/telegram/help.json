@@ -1,0 +1,30 @@
+{
+  "update_id": 100000007,
+  "message": {
+    "message_id": 107,
+    "from": {
+      "id": 1000000001,
+      "is_bot": false,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "language_code": "en"
+    },
+    "chat": {
+      "id": 1000000001,
+      "first_name": "Test",
+      "last_name": "User",
+      "username": "test_user",
+      "type": "private"
+    },
+    "date": 1792141251,
+    "text": "/help",
+    "entities": [
+      {
+        "offset": 0,
+        "length": 5,
+        "type": "bot_command"
+      }
+    ]
+  }
+}

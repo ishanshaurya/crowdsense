@@ -142,9 +142,9 @@ def test_q06_pure_modules_import_nothing_impure_and_never_call_now(module: str) 
 
 
 def test_q07_files_and_functions_stay_small() -> None:
-    for path in python_files("core", "tests"):
+    for path in python_files("core", "tests", "adapters", "api", "scripts"):
         assert len(path.read_text(encoding="utf-8").splitlines()) <= MAX_FILE_LINES, path
-    for path in python_files("core"):
+    for path in python_files("core", "adapters", "api", "scripts"):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 length = (node.end_lineno or node.lineno) - node.lineno + 1

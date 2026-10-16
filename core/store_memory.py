@@ -6,7 +6,7 @@ lock and the reply claim set are held until the transaction ends, like `FOR UPDA
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Collection, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -69,6 +69,12 @@ class InMemoryStore:
         finally:
             tx.release()
 
+    async def ping(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
     async def venues(self) -> list[Venue]:
         return list(VENUES)
 
@@ -88,10 +94,24 @@ class InMemoryStore:
         return list(self._t.events.values())
 
     async def replies(self) -> list[ReplyRow]:
-        return sorted(self._t.replies.values(), key=lambda r: r.id)
+        return [
+            _with_user(self._t, r) for r in sorted(self._t.replies.values(), key=lambda r: r.id)
+        ]
 
     async def funnel_counts(self) -> dict[str, int]:
         return dict(self._t.funnel)
+
+
+def _with_user(t: _Tables, row: ReplyRow) -> ReplyRow:
+    user = next(
+        (
+            i.external_user_id
+            for i in t.identities.values()
+            if i.fan_id == row.fan_id and i.channel == row.channel
+        ),
+        None,
+    )
+    return replace(row, external_user_id=user)
 
 
 class _MemoryTx:
@@ -128,11 +148,13 @@ class _MemoryTx:
             old = table.pop(key)
             self._undo.append(lambda: table.__setitem__(key, old))
 
-    async def record_event(self, event: InboundEvent, now: datetime) -> bool:
+    async def record_event(
+        self, event: InboundEvent, now: datetime, fan_id: int | None = None
+    ) -> bool:
         key = (event.channel, event.external_msg_id)
         if key in self._t.events:
             return False
-        row = EventRow(*key, None, "in", event_payload(event), now)
+        row = EventRow(*key, fan_id, "in", event_payload(event), now)
         self._put(self._t.events, key, row)
         return True
 
@@ -140,7 +162,7 @@ class _MemoryTx:
         rows = self._t.replies.values()
         return sorted(
             (
-                r
+                _with_user(self._t, r)
                 for r in rows
                 if (r.channel, r.external_msg_id) == (channel, external_msg_id)
                 and r.status == "unsent"
@@ -178,11 +200,8 @@ class _MemoryTx:
         key = (channel, external_msg_id)
         self._put(self._t.events, key, replace(self._t.events[key], fan_id=fan_id))
 
-    async def load_fan(self, fan_id: int) -> FanRow:
-        return self._t.fans[fan_id]
-
-    async def load_session(self, fan_id: int) -> SessionRow:
-        return self._t.sessions[fan_id]
+    async def load_state(self, fan_id: int) -> tuple[FanRow, SessionRow]:
+        return self._t.fans[fan_id], self._t.sessions[fan_id]
 
     async def record_answer(
         self, fan_id: int, field: str, value: str | None, now: datetime
@@ -210,6 +229,8 @@ class _MemoryTx:
 
     async def set_opted_out(self, channel: str, external_user_id: str, value: bool) -> None:
         key = (channel, external_user_id)
+        if key not in self._t.identities:  # like an UPDATE that matches no row
+            return
         self._put(self._t.identities, key, replace(self._t.identities[key], opted_out=value))
 
     async def save_progress(
@@ -238,16 +259,34 @@ class _MemoryTx:
             row = self._t.replies[reply_id]
             self._put(self._t.replies, reply_id, replace(row, status="sent"))
 
-    async def claim_unsent(self, older_than: datetime, limit: int) -> list[ReplyRow]:
+    async def claim_unsent(
+        self, older_than: datetime, limit: int, channels: Collection[str] | None = None
+    ) -> list[ReplyRow]:
         free = (
-            r
+            _with_user(self._t, r)
             for r in sorted(self._t.replies.values(), key=lambda r: r.id)
-            if r.status == "unsent" and r.ts < older_than and r.id not in self._t.claimed
+            if r.status == "unsent"
+            and r.ts < older_than
+            and r.id not in self._t.claimed
+            and (channels is None or r.channel in channels)
         )
         rows = [row for _, row in zip(range(limit), free, strict=False)]
         self._t.claimed |= {r.id for r in rows}
         self._claims |= {r.id for r in rows}
         return rows
+
+    async def drop_unsent(self, channel: str, external_user_id: str) -> int:
+        identity = self._t.identities.get((channel, external_user_id))
+        if identity is None or identity.fan_id is None:
+            return 0
+        doomed = [
+            k
+            for k, r in self._t.replies.items()
+            if (r.fan_id, r.channel, r.status) == (identity.fan_id, channel, "unsent")
+        ]
+        for key in doomed:
+            self._pop(self._t.replies, key)
+        return len(doomed)
 
     async def bump_funnel(self, step_id: str) -> None:
         self._put(self._t.funnel, step_id, self._t.funnel.get(step_id, 0) + 1)

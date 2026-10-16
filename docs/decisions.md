@@ -1,6 +1,6 @@
 # Decisions
 
-Why each choice was made. What: `docs/prd.md`. How: `docs/architecture.md`. When: `docs/plan.md`. Issue, options and reasoning behind #54 to #94: `docs/design-review.md`.
+Why each choice was made. What: `docs/prd.md`. How: `docs/architecture.md`. When: `docs/plan.md`. Issue, options and reasoning behind #54 to #98: `docs/design-review.md`.
 
 **Status key:** **Fixed** = decided by user. **Default** = proposed, applies unless research changes it. **Parked** = decided to do later (section 4). **Open** = needs research (section 5).
 
@@ -115,10 +115,14 @@ Channel options: `docs/architecture.md` §8. Council input: `docs/design-review.
 - **#88** A new fan's identity is created with `INSERT … ON CONFLICT DO NOTHING` and then locked (`SELECT … FOR UPDATE`) before anything else, so two fast first messages never create the fan twice or trigger the apology · _(user)_
 - **#89** `docs/metrics.md` holds the scale, load, speed and bot-strength metrics with targets, how each is measured, and results filled in after measuring · _(user)_
 - **#90** Telegram's dedupe key is `update_id`: unique per bot and present on both text messages and button taps (a tap has no `message_id` of its own) · _(user)_
-- **#91** Button data is `<step_id>:<choice_id>` (≤ 64 bytes). A tap whose step is not the fan's current step is stale: ignored, no state change, fan sees "That question has passed" · _(user)_
-- **#92** On every Telegram tap the adapter calls `answerCallbackQuery` at once, then replaces the buttons with "✓ <choice>" via `editMessageReplyMarkup`, so the fan cannot tap twice · _(user)_
-- **#93** Telegram send errors: 429 → wait `retry_after`, then resend; 403 (bot blocked) → mark the identity opted out and stop sending · _(user (delegated))_
+- **#91** Button data is `<step_id>:<choice_id>` (≤ 64 bytes). A tap whose step is not the fan's current step is stale: ignored, no state change, and the fan sees "That question has passed" as a normal chat message (not a toast, because the tap was already answered, see #92). The buttons are left alone · _(user)_
+- **#92** On every Telegram tap the adapter calls `answerCallbackQuery` at once with no text (a tap can be answered only once, and only the engine knows if it is stale). Only if the engine applied the tap are the buttons replaced with "✓ <choice>" via `editMessageReplyMarkup`, so the fan cannot tap twice and a fast tap on another button never shows a wrong ✓. Double tap: the engine cannot tell it from an old-button tap, so the webhook keeps, in process memory for 60 s, the messages it just confirmed with "✓"; a stale tap on one of those is a double tap, and its stale reply is marked sent without being delivered. Older stale taps still get "That question has passed" (#91). After a restart inside that window the worst case is one extra "passed" message · _(user)_
+- **#93** Telegram send errors: 429 → wait `retry_after`, then resend; 403 (bot blocked) → in one transaction mark the identity opted out and delete that fan's pending `unsent` replies (so the sweeper never retries them; no `dropped` status and no schema change, because an undeliverable reply is not worth storing, same spirit as #81); log how many were dropped · _(user)_
 - **#94** The "Would you actually come?" interest question is removed everywhere: no step, no stored field, no edit-menu entry, no filter. Reason: it served no purpose and nothing used it. Supersedes #34 and #35 · _(user)_
+- **#95** Input caps live in the core, so every channel gets them: the engine cuts inbound text to 1,000 characters before it is stored in `events` or reaches `decide`; a `source_tag` is kept only if it matches `^[A-Za-z0-9_-]{1,64}$` (Telegram's deep-link rule), anything else is stored as no tag and the fan still gets in. Postgres length limits on `events` text, `identities.source_tag`, `fans.venue_note` and `fans.email` arrive in a new migration 0003, because 0001 and 0002 are applied to Supabase · _(user)_
+- **#96** Sticker and group-chat updates are not recorded as real fixtures for now. The tests build the group and `/help@bot` cases by modifying recorded fixtures, and a sticker takes the same "message with no text" path as the recorded photo. Real recordings are optional later · _(user)_
+- **#97** The webhook stays on the Supabase session pooler (port 5432, pool max 5) until the last phase, then moves to the transaction pooler (port 6543). Checked on 2026-10-16: the same code behaves identically on both ports (pool, repeated queries, `FOR UPDATE`, `SKIP LOCKED`, rollback), so the switch is a change of `DATABASE_URL`. Migrations must keep a session or direct URL, so the switch also adds an optional `MIGRATION_DATABASE_URL` that `migrations/env.py` prefers over `DATABASE_URL`. Refines #67 · _(user)_
+- **#98** The database limit on `fans.venue_note` and `fans.email` is 200 characters (migration 0003), the same as the flow's own validators. Accepted as a security and scaling measure; reasons in `docs/design-review.md` §15 · _(user)_
 
 ---
 

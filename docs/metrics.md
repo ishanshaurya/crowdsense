@@ -40,7 +40,7 @@ Why the seed is not a load test: it runs the engine in memory and bulk-copies ro
 | Metric                           | Target                                        | How measured                              | Tool              | Phase | Result |
 | -------------------------------- | --------------------------------------------- | ----------------------------------------- | ----------------- | ----- | ------ |
 | Webhook ack p95 (our code only)  | < 300 ms                                      | Fake Telegram updates to the real webhook | Locust            | 6     | —      |
-| Engine turn p95                  | < 100 ms                                      | Engine alone, timed                       | pytest + timer    | 6     | —      |
+| Engine turn p95                  | < 100 ms                                      | Engine alone, timed                       | pytest + timer    | 6     | 0.70 ms on local Postgres (p50 0.48 ms, 800 turns, 8.1 round trips/turn); phase 1 code: 3.45 ms, 12.6 round trips |
 | Dashboard query p95 at 20k fans  | < 1 s                                         | Each query on the seeded DB               | `EXPLAIN ANALYZE` | 4     | —      |
 | Dashboard query p95 at 100k fans | < 1 s                                         | Same, larger seed                         | `EXPLAIN ANALYZE` | 6     | —      |
 | Launch spike                     | 50 msg/s, no errors, recovers in seconds      | Spike run                                 | Locust            | 6     | —      |
@@ -49,6 +49,8 @@ Why the seed is not a load test: it runs the engine in memory and bulk-copies ro
 | New fan visible on dashboard     | ≤ 10 s                                        | Tap in Telegram, watch dashboard          | manual            | 4     | —      |
 
 Report our time, Telegram API time and ngrok time separately, so the numbers are honest.
+
+Database network time, measured separately (2026-10-16, laptop to Supabase Mumbai, session pooler port 5432): fresh connect 136 to 155 ms, one query p50 22 ms (20.7 to 48.6 ms). A known-fan turn is about 8 round trips on a pooled connection, so about 180 ms of database network time per turn (phase 1: a new connection plus about 12.6 round trips, about 430 ms). The phase 1 audit measured 250 ms connect and 35 ms per query on another day; network time varies.
 
 ### How many users that means
 
@@ -66,17 +68,17 @@ Derived from the targets, not measured yet:
 | Duplicate messages handled           | 100% skipped, no double counting                       | Contract + chaos tests | 1, 6  | —      |
 | Double taps by a brand-new fan       | One fan, no error                                      | `P1-S08` (#88)         | 1     | —      |
 | Half-saved turns after a crash       | 0                                                      | `P1-S03` (#55)         | 1     | —      |
-| Same tap delivered twice by Telegram | Skipped by `update_id`                                 | `P2-C03` (#90)         | 2     | —      |
-| Taps on old buttons                  | 100% ignored, no state change                          | `P2-C10` (#91)         | 2     | —      |
-| Fan double-taps one button           | One answer, one reply                                  | `P2-C09` (#91, #92)    | 2     | —      |
-| Fans blocked → messages still sent   | 0                                                      | `P2-C13` (#93)         | 2     | —      |
-| Lost replies                         | 0 (sweeper resends)                                    | `P2-C07` (#72)         | 2     | —      |
+| Same tap delivered twice by Telegram | Skipped by `update_id`                                 | `P2-C03` (#90)         | 2     | Pass, both backends |
+| Taps on old buttons                  | 100% ignored, no state change                          | `P2-C10` (#91)         | 2     | Pass, both backends (+ `P2-C17`) |
+| Fan double-taps one button           | One answer, one reply                                  | `P2-C09` (#91, #92)    | 2     | Pass, both backends (concurrent taps) |
+| Fans blocked → messages still sent   | 0                                                      | `P2-C13` (#93)         | 2     | 0, both backends |
+| Lost replies                         | 0 (sweeper resends)                                    | `P2-C07` (#72)         | 2     | 0 in `P2-C07`, both backends |
 | Duplicate replies                    | Rare; only crash between send and mark (at-least-once) | Chaos test             | 6     | —      |
-| Engine errors shown to fan           | One apology, no retry storm                            | `P2-C04` (#71)         | 2     | —      |
+| Engine errors shown to fan           | One apology, no retry storm                            | `P2-C04` (#71)         | 2     | Pass, both backends |
 | Opted-out fans messaged              | 0                                                      | `P5-C05`               | 5     | —      |
 | Simulated fans messaged              | 0                                                      | `P3-C05`               | 3     | —      |
 | `/delete` leaves fan data            | 0 rows                                                 | `P1-C07` (#81)         | 1     | —      |
-| Coverage on `core/`                  | ≥ 85%                                                  | CI                     | 1     | —      |
+| Coverage on `core/`                  | ≥ 85%                                                  | CI                     | 1     | 98.5% (phase 2) |
 
 ## 5. Other non-functional requirements
 
@@ -101,6 +103,7 @@ Derived from the targets, not measured yet:
 - Secrets only in `.env` / host secrets; `.env.example` has names only.
 - Dashboard uses a read-only DB role.
 - Rate limit per identity and per IP.
+- Input length caps: message text 1,000 characters, `source_tag` 64 characters from a safe alphabet, `venue_note` and `email` 200 characters (#95, #98). Why: `docs/design-review.md` §15.
 - Dependency, secret and image scans in CI.
 
 ### Privacy (DPDP-minded)

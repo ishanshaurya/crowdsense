@@ -41,17 +41,18 @@ Parse tests read recorded payloads from `fixtures/telegram/`.
 | P2-C03 | Same update delivered twice (Telegram retry) | One set of rows; one outgoing message | 41 |
 | P2-C04 | Engine raises an error | Webhook returns 200; nothing saved; one apology message sent; error logged with a correlation id | 41, 71 |
 | P2-C05 | Outgoing message shape | Text and inline keyboard match what `Reply` asked for | 5 |
+| P2-C06 | Webhook against real Postgres | All of the above also pass | 26 |
 | P2-C07 | Telegram send fails, then recovers | Reply stays `unsent`; sweeper sends it once it is older than 10 s; then `sent` | 55, 72 |
 | P2-C08 | Sweeper sees a fresh `unsent` reply (under 10 s) | Not sent yet, so it cannot race the in-flight send | 72 |
-| P2-C09 | Fan taps one button twice fast | First tap applied; second is stale and ignored; one reply | 91, 92 |
-| P2-C10 | Fan taps a button from an earlier question | No state change; "That question has passed" toast | 91 |
-| P2-C11 | Any tap | `answerCallbackQuery` called before the engine reply; buttons replaced with "✓ <choice>" | 92 |
+| P2-C09 | Fan taps one button twice fast | First tap applied and its buttons become "✓ <choice>"; second is stale, ignored, no second edit; exactly one reply reaches the fan and no "That question has passed" message is delivered | 91, 92 |
+| P2-C10 | Fan taps a button from an earlier question | No state change; `answerCallbackQuery` sent with no text; "That question has passed" arrives as a normal chat message; the buttons are left unchanged | 91, 92 |
+| P2-C11 | Any tap | `answerCallbackQuery` (no text) called before the engine runs; buttons replaced with "✓ <choice>" only when the engine applied the tap | 92 |
 | P2-C12 | Telegram returns 429 with `retry_after` | Resend waits at least `retry_after` seconds | 93 |
-| P2-C13 | Telegram returns 403 (bot blocked) | Identity marked opted out; no further sends | 93 |
+| P2-C13 | Telegram returns 403 (bot blocked) | Identity marked opted out and that fan's `unsent` replies deleted in one transaction; the sweeper never retries them; no further sends; the count dropped is logged | 93 |
 | P2-C14 | Oversized message (5,000 characters), on the fake and on Postgres | Stored and decided as its first 1,000 characters; no error | 95 |
 | P2-C15 | DB length limits | Oversized `source_tag`, `venue_note` or `email` written straight to Postgres is rejected | 41, 95 |
 | P2-C16 | Caps migration | Up and down on a database already at 0002 with rows in it | 95 |
-| P2-C06 | Webhook against real Postgres | All of the above also pass | 26 |
+| P2-C17 | Stale tap on a message confirmed more than 60 s ago, and on a message the webhook never confirmed | The fan gets "That question has passed" as a chat message | 91, 92 |
 
 ## Manual (see `manual/manual-checklist.md`, Phase 2)
 
