@@ -1,0 +1,13 @@
+id: decline_consent
+description: fan taps No thanks; nothing is collected
+decisions: [36]
+steps:
+  - send: {kind: start}
+    expect: {step: consent}
+  - send: {kind: choice, value: "No thanks"}
+    expect: {step: declined}
+  - send: {kind: text, value: "Pune"}
+    expect: {step: declined}
+final_db:
+  fans: {consent: false, city: null, venue: null}
+  answers: {count: 0}

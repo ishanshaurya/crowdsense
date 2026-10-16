@@ -1,0 +1,18 @@
+id: delete_command
+description: /delete erases fan data but keeps an anonymous funnel count
+decisions: [36]
+steps:
+  - send: {kind: start, source_tag: ig_story}
+    expect: {step: consent}
+  - send: {kind: choice, value: "Count me in"}
+    expect: {step: city}
+  - send: {kind: choice, value: "Pune"}
+    expect: {step: venue}
+  - send: {kind: command, value: "/delete"}
+    expect: {step: deleted}
+final_db:
+  fans: none
+  identities: none
+  sessions: none
+  answers: none
+  events: {kept: true, user_id_scrubbed: true}

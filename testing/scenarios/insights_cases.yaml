@@ -1,0 +1,80 @@
+# Insights cases. Venues come from decisions.md (venue table).
+# People per group bucket: 1_->1, 2->2, 3_5->4, 6_plus->6. Only completed fans count (spec gap A4).
+# Assumptions A1 (attendance per city), A2 (tie -> lower band), A3 (Other counts in city), A5 (growth "new") are marked.
+
+people_sum_and_venue_pick:
+  decisions: [31, 33]
+  fans:
+    - {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: "1", completed: true}
+    - {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: "2", completed: true}
+    - {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: 3_5, completed: true}
+    - {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: 6_plus, completed: true}
+  expect:
+    city_attendance: {Pune: 13}
+    venue_demand: {Baner Greens: {fans: 4, people: 13}}
+    suggested_venue: {Pune: Koregaon Park Lawns}   # 13 / 0.8 = 16.25; smallest venue with capacity >= that
+
+venue_rule:                                         # attendance given directly
+  decisions: [31]
+  cases:
+    - {city: Mumbai, attendance: 3200, suggested: Bandra Waterfront}      # boundary: 3200 / 0.8 = 4000
+    - {city: Mumbai, attendance: 3201, suggested: Mahalaxmi Maidan}       # 4001.25 > 4000
+    - {city: Mumbai, attendance: 25000, suggested: Mahalaxmi Maidan}      # 31250 > 30000, falls back to largest
+    - {city: Bengaluru, attendance: 1600, suggested: Indiranagar Yard}    # 2000 <= 2000
+    - {city: Hyderabad, attendance: 100, suggested: Gachibowli Fields}    # only one venue
+    - {city: Indore, attendance: 0, suggested: none}                      # no demand, no suggestion
+
+price_band:
+  decisions: [32]
+  cases:
+    - {budgets: [lt_1500, 1500_3000, 1500_3000, 3000_6000], expect: 1500_3000}
+    - {budgets: [1500_3000, 3000_6000], expect: 1500_3000}                # tie -> lower band (A2)
+    - {budgets: [gte_6000], expect: gte_6000}
+    - {budgets: [], expect: none}
+
+completed_only:
+  decisions: [31]
+  fans:
+    - {city: Pune, venue: Baner Greens, group_size: "2", completed: true}
+    - {city: Pune, venue: Baner Greens, group_size: 6_plus, completed: false}
+  expect:
+    city_attendance: {Pune: 2}
+    funnel: {started: 2, completed: 1}
+
+other_venue_counts_in_city:                          # A3
+  decisions: [27, 31]
+  fans:
+    - {city: Pune, venue: Baner Greens, budget_band: 1500_3000, group_size: "2", completed: true}
+    - {city: Pune, venue: null, venue_note: "somewhere", budget_band: 1500_3000, group_size: 3_5, completed: true}
+  expect:
+    city_attendance: {Pune: 6}
+    venue_demand: {Baner Greens: {fans: 1, people: 2}}
+    price_band: {Pune: 1500_3000}
+
+city_priority_order:
+  decisions: [31]
+  city_attendance_input: {Mumbai: 500, Delhi NCR: 700, Pune: 100}
+  expect:
+    order: [Delhi NCR, Mumbai, Pune]
+
+growth_badge:
+  decisions: [31]
+  cases:                                             # this_week vs prior_week signups
+    - {this_week: 12, prior_week: 10, badge: true}   # +20%
+    - {this_week: 119, prior_week: 100, badge: false}# +19%
+    - {this_week: 5, prior_week: 0, badge: new}      # A5
+    - {this_week: 0, prior_week: 0, badge: none}
+
+interest_does_not_filter:
+  decisions: [34, 35]
+  fans_a:
+    - {city: Pune, venue: Baner Greens, group_size: "2", interest: definitely, completed: true}
+    - {city: Pune, venue: Baner Greens, group_size: "2", interest: just_curious, completed: true}
+  expect:
+    city_attendance: {Pune: 4}                       # both count
+    same_result_if_interest_swapped: true
+
+empty_data:
+  decisions: [31]
+  fans: []
+  expect: {city_attendance: {}, suggested_venue: {}, price_band: {}, order: []}

@@ -1,0 +1,15 @@
+id: stop_command
+description: /stop mid-flow opts out; later messages get no questions
+decisions: [36]
+steps:
+  - send: {kind: start}
+    expect: {step: consent}
+  - send: {kind: choice, value: "Count me in"}
+    expect: {step: city}
+  - send: {kind: command, value: "/stop"}
+    expect: {step: stopped}
+  - send: {kind: choice, value: "Pune"}
+    expect: {no_reply: true}
+final_db:
+  identities: {opted_out: true}
+  fans: {city: null}

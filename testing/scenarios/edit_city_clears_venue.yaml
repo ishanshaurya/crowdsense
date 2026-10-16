@@ -1,0 +1,13 @@
+id: edit_city_clears_venue
+description: changing city clears the venue and asks again (spec gap A7)
+decisions: [25]
+setup: {scenario: happy_path_pune}
+steps:
+  - send: {kind: start}
+    expect: {step: edit_menu}
+  - send: {kind: choice, value: "City"}
+    expect: {step: city}
+  - send: {kind: choice, value: "Mumbai"}
+    expect: {step: venue, options: ["Mahalaxmi Maidan", "Bandra Waterfront", "Other / not listed"]}
+final_db:
+  fans: {city: Mumbai, venue: null}

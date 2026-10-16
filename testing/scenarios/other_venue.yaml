@@ -1,0 +1,16 @@
+id: other_venue
+description: fan picks Other / not listed and types a place
+decisions: [27]
+steps:
+  - send: {kind: start}
+    expect: {step: consent}
+  - send: {kind: choice, value: "Count me in"}
+    expect: {step: city}
+  - send: {kind: choice, value: "Pune"}
+    expect: {step: venue}
+  - send: {kind: choice, value: "Other / not listed"}
+    expect: {step: venue_note}
+  - send: {kind: text, value: "near the airport"}
+    expect: {step: budget}
+final_db:
+  fans: {city: Pune, venue: null, venue_note: "near the airport"}

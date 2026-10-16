@@ -1,0 +1,11 @@
+id: email_validation
+description: invalid email is re-asked, valid email is stored
+decisions: [36]
+setup: {scenario: happy_path_pune, stop_before: email}
+steps:
+  - send: {kind: text, value: "not-an-email"}
+    expect: {step: email, error: true}
+  - send: {kind: text, value: "fan@example.com"}
+    expect: {step: done}
+final_db:
+  fans: {email: "fan@example.com"}

@@ -1,0 +1,14 @@
+id: bad_input_then_ok
+description: an option that does not exist is rejected, then a valid one works
+decisions: [13]
+steps:
+  - send: {kind: start}
+    expect: {step: consent}
+  - send: {kind: choice, value: "Count me in"}
+    expect: {step: city}
+  - send: {kind: choice, value: "Atlantis"}
+    expect: {step: city, error: true}
+  - send: {kind: text, value: "Pune"}
+    expect: {step: venue}
+final_db:
+  fans: {city: Pune}

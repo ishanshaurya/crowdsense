@@ -1,0 +1,14 @@
+id: returning_fan_edit
+description: a finished fan comes back and changes one answer
+decisions: [12, 36]
+setup: {scenario: happy_path_pune}
+steps:
+  - send: {kind: start}
+    expect: {step: edit_menu, options: ["City", "Venue", "Budget", "Group", "Interest", "All good"]}
+  - send: {kind: choice, value: "Budget"}
+    expect: {step: budget}
+  - send: {kind: choice, value: "₹3,000–6,000"}
+    expect: {step: done}
+final_db:
+  fans: {budget_band: 3000_6000}
+  answers: {count_for_field: {budget_band: 2}}

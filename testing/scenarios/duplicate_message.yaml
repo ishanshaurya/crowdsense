@@ -1,0 +1,11 @@
+id: duplicate_message
+description: the same message id delivered twice is processed once
+decisions: [41]
+steps:
+  - send: {kind: start, msg_id: m1}
+    expect: {step: consent}
+  - send: {kind: start, msg_id: m1}
+    expect: {no_reply: true, duplicate: true}
+final_db:
+  events: {count_for_msg_id: {m1: 1}}
+  identities: {count: 1}
