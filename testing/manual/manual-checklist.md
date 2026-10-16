@@ -13,14 +13,14 @@ One checklist, sections per phase (phases 1 to 5). Tick when done; note anything
 
 ## Phase 2: Telegram (real phone)
 
-- [ ] Bot token and secret only in env; nothing sensitive in the repo.
-- [ ] ngrok running and webhook registered.
-- [ ] Tap `t.me/<bot>?start=ig_story`: consent appears with two buttons.
-- [ ] Finish the whole flow from your phone; buttons render and are tappable.
-- [ ] Row appears in Supabase with the right values and the `ig_story` source tag.
-- [ ] Send `/start` with a different tag from a second account; source tag stored per identity.
-- [ ] Send a photo and a sticker; the bot does not crash.
-- [ ] Record fixtures from this session and scrub them (see `fixtures/telegram/README.md`).
+- [x] Bot token and secret only in env; nothing sensitive in the repo.
+- [x] ngrok running and webhook registered.
+- [x] Tap `t.me/<bot>?start=ig_story`: consent appears with two buttons.
+- [x] Finish the whole flow from your phone; buttons render and are tappable.
+- [x] Row appears in Supabase with the right values and the `ig_story` source tag.
+- [x] Send `/start` with a different tag from a second account; source tag stored per identity.
+- [x] Send a photo and a sticker; the bot does not crash.
+- [x] Record fixtures from this session and scrub them (see `fixtures/telegram/README.md`).
 
 ## Phase 3: Web sim and seed
 

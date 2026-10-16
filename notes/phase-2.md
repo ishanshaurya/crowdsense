@@ -2,7 +2,7 @@
 
 Goal: a real phone taps `t.me/crowdsense_live_bot?start=ig_story`, finishes the flow over Telegram, and the rows land in Supabase. Along the way: input caps in core (#95), a pooled Postgres store, the resend sweeper (#72) and the Telegram failure rules (#71, #93).
 
-Status: **built and green.** 256 tests pass (phase 1's 142 are all still green), `core/` coverage 98.5%. ruff, ruff format, mypy strict (now `core`, `adapters`, `api`), import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are all clean. Migration 0003 is applied to Supabase. **Open:** the live phone run (checkpoint C) and the Phase 2 manual checklist.
+Status: **built and green.** 256 tests pass (phase 1's 142 are all still green), `core/` coverage 98.5%. ruff, ruff format, mypy strict (now `core`, `adapters`, `api`), import-linter (4 contracts), detect-secrets, pip-audit and `uv lock --check` are all clean. Migration 0003 is applied to Supabase. Checkpoint C (live phone runs) done, user confirmed 2026-10-16.
 
 ## Build checklist
 
@@ -16,7 +16,7 @@ Status: **built and green.** 256 tests pass (phase 1's 142 are all still green),
 - [x] 3. Webhook, sender (429/403/pacing), sweeper, `/health`, `/ready`, double-tap guard
 - [x] 4. Tests P2-U01..U12, P2-C01..C17, Q-11..Q-14
 - [x] 5a. Checkpoint B: 0003 applied to Supabase and verified
-- [ ] 5b. Checkpoint C: real phone flow, rows checked in Supabase, manual checklist
+- [x] 5b. Checkpoint C: real phone flow, rows checked in Supabase, manual checklist (user confirmed, 2026-10-16)
 - [x] 6. These notes, `docs/metrics.md` results
 
 ## Overview
