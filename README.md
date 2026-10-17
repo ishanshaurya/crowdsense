@@ -27,28 +27,7 @@ The dashboard sits behind a password. Access is available on request.
 
 ## Architecture
 
-```
- Fan on Telegram        Fan on web chat
-        │ webhook              │ POST /chat/message
-        ▼                      ▼
- ┌──────────────────────────────────────────┐
- │ Webhook service (FastAPI)                │
- │   adapters/  parse ─▶ engine ─▶ send     │
- │   core/      flow, rules, store          │
- └────────────────────┬─────────────────────┘
-                      │ write
-                      ▼
-            ┌───────────────────┐   INSERT announcement_requests
-            │ Postgres          │◀───────────────┐  (only write)
-            └─────────┬─────────┘                │
-                      │ read                     │
-                      ▼                          │
- ┌──────────────────────────────────────────┐    │
- │ Dashboard (Streamlit, own DB role)       │────┘
- └──────────────────────────────────────────┘
-
- announcement_requests ─▶ sweeper ─▶ fan-out to consenting fans ─▶ replies ─▶ sender ─▶ Telegram
-```
+![CrowdSense architecture: one engine, many channels](docs/media/architecture.png)
 
 ## Channels are plugins
 
