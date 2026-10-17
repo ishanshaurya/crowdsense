@@ -109,4 +109,4 @@ Built, tested and tagged:
 4. The dashboard: live funnel, demand, venue, price band and city recommendations, with a Simulated / Real switch.
 5. Outbound announcements to the fans in a city, sent from a dashboard form. The app is also hosted on Railway.
 
-Next is phase 6, hardening: an inbox-first webhook (started on branch `phase6a`), load and resilience tests, observability, and a smaller tap latency. Later and not planned: WhatsApp, Instagram and Discord adapters, merging a fan across channels, LLM parsing of free text, and deposits or waitlists as a stronger demand signal.
+Next is phase 6, hardening: an inbox-first webhook (started on branch `phase6a`), load and resilience tests, observability, and a smaller tap latency. Later and not planned: WhatsApp, Instagram and Discord adapters, merging a fan across channels, parsing free-text answers automatically, and deposits or waitlists as a stronger demand signal.
