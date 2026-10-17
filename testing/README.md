@@ -1,6 +1,6 @@
 # Testing
 
-Tests are the living spec. Each phase in `docs/plan.md` has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. This folder was written first and the build followed it; phases 1 to 4 are built.
+Tests are the living spec. Each phase in `docs/prd.md` §8 has a test file here that says what to build, how it is proven, and what must still pass from earlier phases. This folder was written first and the build followed it; phases 1 to 4 are built.
 
 ## Folder map
 

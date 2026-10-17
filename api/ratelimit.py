@@ -1,4 +1,4 @@
-"""Per-IP token bucket for the public web chat routes (docs/plan.md Phase 3).
+"""Per-IP token bucket for the public web chat routes (phase 3).
 
 In process memory: fine for one laptop process, like `RecentTaps`. Memory stays bounded: idle
 buckets (refilled to full) are dropped when the table grows, and at most `max_keys` are kept.

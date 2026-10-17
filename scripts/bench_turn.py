@@ -1,4 +1,4 @@
-"""Time engine turns against a LOCAL Postgres (docs/metrics.md, "Engine turn p95").
+"""Time engine turns against a LOCAL Postgres (`docs/architecture.md` §11).
 
     DATABASE_URL=postgresql://localhost:5432/bench uv run python -m scripts.bench_turn 50
 

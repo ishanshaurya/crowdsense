@@ -1,6 +1,6 @@
 # Architecture
 
-How Crowdsense is built. What and why: `docs/prd.md`. Bot texts and messaging errors: `docs/message-script.md`.
+How Crowdsense is built. What and why: `docs/prd.md`. Roadmap: `docs/prd.md` §8. Bot texts and messaging errors: `docs/message-script.md`.
 
 **Principle:** channels are plugins.
 - Adapters only translate messages.
@@ -147,7 +147,7 @@ Every social app talks to the same engine. An adapter only translates the app's 
 
 | Step | What the engine does on each message                         | Why                                       |
 | ---- | ------------------------------------------------------------ | ----------------------------------------- |
-| 1    | Skip the message if already seen (`channel`, `message id`)   | Apps resend; a fan is never asked twice   |
+| 1    | Skip the message if already seen (`channel`, `message id`)   | Apps resend, a fan is never asked twice   |
 | 2    | Find or create the fan, and lock them                        | Two fast messages never create two fans   |
 | 3    | Check the answer, save it, move to the next question         | Same flow for every app                   |
 | 4    | Save the replies as `unsent`, commit everything at once       | Nothing is half saved                     |
@@ -159,27 +159,27 @@ Every social app talks to the same engine. An adapter only translates the app's 
 
 | Failure                    | Reason                                                       | What happens                                                           |
 | -------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| Engine error               | A bug in our code during a turn                              | Turn rolled back; fan gets "Something went wrong, please tap again"; error logged (#71) |
+| Engine error               | A bug in our code during a turn                              | Turn rolled back, fan gets "Something went wrong, please tap again", error logged (#71) |
 | Database down              | Supabase unreachable or paused                               | Webhook returns 5xx, so Telegram retries later                         |
-| Send fails                 | Telegram or network error while sending a reply              | Reply stays `unsent`; resend sweeper sends it within about 40 s (#72)  |
+| Send fails                 | Telegram or network error while sending a reply              | Reply stays `unsent`, resend sweeper sends it within about 40 s (#72)  |
 | 429 Too Many Requests      | We hit Telegram's rate limit                                 | Wait the `retry_after` time, then resend (#69)                         |
-| 403 Forbidden              | Fan blocked the bot                                          | Fan marked opted out; their unsent replies deleted (#93)               |
+| 403 Forbidden              | Fan blocked the bot                                          | Fan marked opted out, their unsent replies deleted (#93)               |
 | Reply sent twice           | Crash after Telegram accepted the reply, before it was marked `sent` | Accepted: one duplicate is better than a lost reply (#72)      |
 
 **Edge cases:**
 
 | Edge case                                          | What happens                                                                 |
 | -------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Telegram sends the same message twice              | Second copy skipped by the message id; no double answer (#90)                |
-| New fan sends two messages very fast               | Second waits on the fan lock; only one fan is created (#88)                  |
+| Telegram sends the same message twice              | Second copy skipped by the message id, no double answer (#90)                |
+| New fan sends two messages very fast               | Second waits on the fan lock, only one fan is created (#88)                  |
 | Fan types text where buttons are expected, or the reverse | Same question asked again (A10)                                       |
-| Fan taps a button on an old question               | Nothing changes; bot says "That question has passed" (#91)                   |
+| Fan taps a button on an old question               | Nothing changes, bot says "That question has passed" (#91)                   |
 | Fan double-taps the same button                    | Second tap ignored silently (#92)                                            |
 | Fan types an invalid email                         | Asked again, with a Skip option                                              |
-| Fan picks "Other" venue                            | Venue left empty, their note saved; counts for the city only (#46, #51)      |
-| Returning fan                                      | Sees their answers and can edit one; history kept in `answers`               |
+| Fan picks "Other" venue                            | Venue left empty, their note saved, counts for the city only (#46, #51)      |
+| Returning fan                                      | Sees their answers and can edit one, history kept in `answers`               |
 | Returning fan changes city                         | Venue cleared and asked again, since venues belong to a city (A7)            |
-| Fan sends `/start` after `/stop`                   | Subscribed again; resumes at their saved question (A9)                       |
+| Fan sends `/start` after `/stop`                   | Subscribed again, resumes at their saved question (A9)                       |
 | Very long message                                  | Cut to 1,000 characters (#95)                                                |
 | Same person on Telegram and web chat               | Counted as two fans for now (#37)                                            |
 
@@ -193,7 +193,7 @@ Every social app talks to the same engine. An adapter only translates the app's 
 
 | Command   | What it does                                                                                       |
 | --------- | -------------------------------------------------------------------------------------------------- |
-| `/stop`   | Sets `opted_out = true`. Fan gets no more messages; their answers stay                             |
+| `/stop`   | Sets `opted_out = true`. Fan gets no more messages, their answers stay                             |
 | `/delete` | Removes the fan's `fans`, `answers`, `identities`, `sessions`, `replies` and `events` rows (#81)    |
 
 After `/delete`:
@@ -205,8 +205,8 @@ After `/delete`:
 
 - Reads `fans`, `venues`, `funnel_counts`, and `identities` (source tag only).
 - Uses a read-only DB role (`crowdsense_dashboard`, SELECT only, #105). Phase 5 adds INSERT on `announcement_requests` only (#80). Supabase's public API roles are closed out of our tables (#108).
-- Phase 5: announcement form: city dropdown, date picker (today or later), live preview, "Will send to N fans", confirm (#75). Confirm inserts an `announcement_requests` row; the webhook service's sweeper sends it through `core/outbound.py`, paced to Telegram limits (#80, #69).
-- Reads through `core/demand.py` (sync). Aggregation in SQL; rules in `insights.py`.
+- Phase 5: announcement form: city dropdown, date picker (today or later), live preview, "Will send to N fans", confirm (#75). Confirm inserts an `announcement_requests` row, the webhook service's sweeper sends it through `core/outbound.py`, paced to Telegram limits (#80, #69).
+- Reads through `core/demand.py` (sync). Aggregation in SQL, rules in `insights.py`.
 - Password gate (`DASHBOARD_PASSWORD`). Emails hidden unless toggled on.
 - Refreshes every 5 s, one read-only snapshot per refresh, so new fans appear live (#106).
 - Switch: Simulated (default) / Real. The two are never mixed (#73).
@@ -217,31 +217,83 @@ Views:
 - Budget band distribution
 - Group size distribution
 - City × venue heatmap
-- Response funnel (by furthest step reached; completed = `completed_at` set, #84)
-- Growth per city per IST week (last 6 weeks); badge from the rolling 7 days (#85)
+- Response funnel (by furthest step reached, completed = `completed_at` set, #84)
+- Growth per city per IST week (last 6 weeks), badge from the rolling 7 days (#85)
 - Source breakdown
 - Recommendations card
-- Latest fans (50 newest counted fans; email column hidden until toggled, #60)
+- Latest fans (50 newest counted fans, email column hidden until toggled, #60)
 
 Recommendation rules (`core/insights.py`):
 - Counted fan = `completed_at` is set (first time the fan reaches done). Edits never uncount (#70, #52).
 - A fan re-asked for a venue counts for the city, not for any venue, like "Other" (#51).
 - People per fan: 1→1, 2→2, 3–5→4, 6+→6 (#33).
-- Suggested venue: smallest with capacity ≥ city attendance ÷ 0.8; else largest (#31c, #49).
-- Price band: per city, most common band among counted fans; tie → lower band (#79, #50).
+- Suggested venue: smallest with capacity ≥ city attendance ÷ 0.8, else largest (#31c, #49).
+- Price band: per city, most common band among counted fans, tie → lower band (#79, #50).
 - "Other" fans: count for city, not for any venue (#51).
-- Growing: counted fans by `completed_at`; last 7 days ≥ 1.2 × the 7 days before; 0 before → "new" (A5, A6, #85).
+- Growing: counted fans by `completed_at`, last 7 days ≥ 1.2 × the 7 days before, 0 before → "new" (A5, A6, #85).
 
 ## 9. Built-in from phase 1
 
-Written this way from day one; retrofitting costs a rewrite.
+Written this way from day one, retrofitting costs a rewrite.
 
 | Item                     | What                                                                 | Why                                                   |
 | ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------- |
 | Pure core                | `decide(state, event) -> (state, replies, writes)`, no I/O           | Fast, deterministic tests                             |
-| Store interface          | Postgres + in-memory fake                                            | Tests without a DB; backup DB drops in                |
-| Insights module          | Rules as pure functions                                              | Testable; Streamlit only draws                        |
-| One transaction per turn | Dedupe, identity lock (#88), state, answers, replies commit together | No half-saved turns; double taps serialised           |
-| Clock seam               | Engine and seed get time from `clock.py`                             | Seed spreads fans across weeks; growth rules testable |
+| Store interface          | Postgres + in-memory fake                                            | Tests without a DB, backup DB drops in                |
+| Insights module          | Rules as pure functions                                              | Testable, Streamlit only draws                        |
+| One transaction per turn | Dedupe, identity lock (#88), state, answers, replies commit together | No half-saved turns, double taps serialised           |
+| Clock seam               | Engine and seed get time from `clock.py`                             | Seed spreads fans across weeks, growth rules testable |
 | Store contract tests     | One suite runs on Postgres and the in-memory fake                    | The fake is a trustworthy second adapter              |
-| Config module            | Settings validated at startup (`ARTIST_NAME`, URLs, secrets)         | Fail fast; no hard-coded "Artist X"                   |
+| Config module            | Settings validated at startup (`ARTIST_NAME`, URLs, secrets)         | Fail fast, no hard-coded "Artist X"                   |
+
+## 10. Inbox and outbox (phase 6)
+
+§1 decisions #47, #55, #59, #64 point here.
+
+```
+Telegram ─▶ /hook ─▶ auth, parse, answer tap ─▶ INSERT inbox ─▶ 200
+                                                    │ fast path (background, right after the 200)
+                                                    ▼
+             inbox worker: engine turn (one transaction) ─▶ DELETE inbox row ─▶ send replies
+                 ▲                                     │
+   loop, 5 s: rows ≥ 10 s old                    replies (unsent) ─▶ sweeper, 5 s: ≥ 10 s old ─▶ send
+```
+
+**Inbox** (`inbox` table, `api/inbox_worker.py`, migration 0005).
+- The webhook stores the raw update and answers 200 before the engine runs. A slow or failing turn no longer holds Telegram's request.
+- A row exists only while its update is unprocessed. It is deleted as soon as the turn commits, so the table stays near empty. There is no status column.
+- `UNIQUE (channel, external_msg_id)`: a retry that arrives while the first copy is queued gets a 200 and nothing else.
+- Database down on the insert: 503, Telegram retries. Down during the turn: the row stays and the loop retries it. Engine bug: rollback, one apology, row deleted (#71).
+- Fast path and loop can both run one row. `events` dedupes it (#55), so the second run is a duplicate turn that only resends replies still unsent.
+
+**Outbox** (no new table). The `replies` log is the outbox (#47): replies commit with the turn, the sender sends after commit, and the sweeper (#72) claims unsent rows with `FOR UPDATE SKIP LOCKED` and resends them. Announcements use the same path at priority 1 (#59, #111).
+
+**Guarantee:** at-least-once, end to end. Duplicate sends are possible:
+- the process dies after a send but before `mark_sent`;
+- the loop picks up a row while the fast path still holds its replies unsent: a turn slower than 10 s, or a failed delete during a slow send.
+
+**Still phase 6:** campaigns beyond announcements (#64), tap latency, rate limit behind the proxy (#99), frozen-core check against HEAD.
+
+## 11. Performance and scale
+
+Numbers I measured, then what I'd do next.
+
+| What | Result |
+| --- | --- |
+| Seeded fans | ~20,000 simulated (76,800 answer rows, 63 MB of the 500 MB free tier), real testers ~10 |
+| Seed run | 6.4 s locally (engine 4.9 s, bulk copy 1.4 s) |
+| Engine turn | 0.70 ms p95 on local Postgres, 8 round trips per turn |
+| Dashboard refresh | whole refresh (12 queries, one round trip) p95 31 ms locally, slowest single query p95 6 ms |
+| New fan on the dashboard | 0.55 to 4.45 s, worst case by design about 9 s (5 s refresh plus 4 s cache) |
+| Tap to next question | about 1.2 to 1.5 s on a laptop through ngrok |
+
+The tap time is round trips, not computing. Supabase is about 45 ms per query from my laptop and Telegram about 180 ms per call, and a turn needs about eight of the first and three of the second. Fewer round trips and sending the next question before the button tick would save roughly 450 ms. Railway runs in Singapore, so hosting alone doesn't remove the database distance.
+
+The seed isn't a load test: it runs the engine in memory and skips the webhook and the network. Load, soak and 100,000-fan tests are phase 6 and have no results yet. Sending is capped by Telegram at about 30 messages per second overall and 1 per second per chat.
+
+| Load | First bottleneck | Next step |
+| --- | --- | --- |
+| ~100k fans | Dashboard queries | Indexes, materialized views refreshed per minute |
+| ~1M fans / a big launch | Webhook spikes, database writes | Inbox plus worker pool, transaction pooler, a read replica for the dashboard |
+| Many artists | Data isolation | A campaigns table and row-level security |
+| ~10M answers | Size of `answers` and `events` | Partition by month, archive old events |
