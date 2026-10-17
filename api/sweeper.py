@@ -1,11 +1,12 @@
-"""Resend sweeper (#72): every 30 s, claim unsent replies older than 10 s, send, mark sent.
+"""Resend sweeper (#72): every 5 s, claim unsent replies, send, mark sent.
 
 Each pass first fans out pending announcement requests (#80, `core.outbound`); their replies are
-priority 1, so chat replies are claimed before them.
+priority 1, so chat replies are claimed before them, and they skip the age wait (nothing else is
+sending them), so an announcement goes out within one tick.
 
-The 10 s age keeps it away from replies the webhook is still sending. Claims use
-`FOR UPDATE SKIP LOCKED`, so two sweepers never take the same row. Delivery is at-least-once:
-a crash after a send but before the commit sends that reply again.
+Chat replies must be 10 s old: that keeps the sweeper away from replies the webhook is still
+sending. Claims use `FOR UPDATE SKIP LOCKED`, so two sweepers never take the same row.
+Delivery is at-least-once: a crash after a send but before the commit sends that reply again.
 """
 
 import asyncio
@@ -32,7 +33,7 @@ class Sweeper:
         adapters: Mapping[str, Adapter],
         clock: Clock,
         *,
-        interval: float = 30.0,
+        interval: float = 5.0,
         min_age: float = 10.0,
         batch: int = 50,
         outbound: Outbound | None = None,

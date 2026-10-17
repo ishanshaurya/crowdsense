@@ -13,9 +13,11 @@ from datetime import UTC, date, datetime
 import streamlit as st
 
 from core.catalog import CITIES
+from core.clock import SystemClock
 from core.config import ConfigError, DashboardSettings, load_dashboard_settings
 from core.demand import DEFAULT_VIEW, VIEWS, DemandReader, DemandReport, View
 from core.outbound import announcement_reply, audience_count, request_announcement, today_ist
+from core.sessions import SESSION_SECONDS, SessionTokens
 from core.store import StoreUnavailable
 from dashboard import views
 from dashboard.text import (
@@ -31,6 +33,7 @@ from dashboard.text import (
 REFRESH_SECONDS = 5
 CACHE_SECONDS = 4  # shared by every open tab: about one query batch per 5 s per view (#106)
 FAILED_LOGIN_DELAY = 1.0
+COOKIE = "crowdsense_session"
 
 
 @st.cache_resource
@@ -48,8 +51,18 @@ def _report(view: View, with_email: bool) -> DemandReport:
     return _reader().report(view, datetime.now(UTC), with_email=with_email)
 
 
+@st.cache_resource
+def _tokens() -> SessionTokens:
+    return SessionTokens(SystemClock())
+
+
 def _gate(password: str) -> bool:
     if st.session_state.get("signed_in"):
+        return True
+    cookie = st.context.cookies.get(COOKIE)
+    if _tokens().valid(cookie):  # a reload or new tab starts a new session; the cookie bridges it
+        st.session_state.signed_in = True
+        st.session_state.session_token = cookie
         return True
     with st.form("gate"):
         typed = st.text_input("Password", type="password")
@@ -57,10 +70,31 @@ def _gate(password: str) -> bool:
     if submitted:
         if hmac.compare_digest(typed.encode(), password.encode()):
             st.session_state.signed_in = True
+            st.session_state.session_token = _tokens().issue()
             st.rerun()
         time.sleep(FAILED_LOGIN_DELAY)  # slows guessing
         st.error("Wrong password.")
     return False
+
+
+def _remember_browser() -> None:
+    """Gives the browser its token (SameSite=Strict, Secure on https); never the password."""
+    token = st.session_state.get("session_token")
+    if token:
+        st.html(
+            f"<script>document.cookie = '{COOKIE}={token}; path=/; max-age={SESSION_SECONDS}; "
+            "SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : '');</script>",
+            unsafe_allow_javascript=True,
+        )
+
+
+def _sign_out() -> None:
+    _tokens().revoke(st.session_state.get("session_token"))
+    st.session_state.clear()
+    st.html(
+        f"<script>document.cookie = '{COOKIE}=; path=/; max-age=0';</script>",
+        unsafe_allow_javascript=True,
+    )
 
 
 @st.fragment(run_every=REFRESH_SECONDS)
@@ -130,11 +164,13 @@ def main() -> None:
         st.stop()
     if not _gate(settings.password):
         st.stop()
+    _remember_browser()
     with st.sidebar:
         view = st.radio(
             "Data", VIEWS, index=VIEWS.index(DEFAULT_VIEW), format_func=VIEW_LABEL.get, key="view"
         )
         show_emails = st.toggle("Show emails (this session only)", value=False, key="emails")
+        st.button("Sign out", on_click=_sign_out)
     _live(view, show_emails)
     _announce(settings)
 

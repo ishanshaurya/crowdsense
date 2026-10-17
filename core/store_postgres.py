@@ -295,7 +295,7 @@ class _PgTx:
         wanted = None if channels is None else list(channels)
         cursor = await self._run(
             _SELECT_REPLIES
-            + " WHERE r.status = 'unsent' AND r.ts < %s"
+            + " WHERE r.status = 'unsent' AND (r.priority > 0 OR r.ts < %s)"
             + " AND (%s::text[] IS NULL OR r.channel = ANY(%s::text[]))"
             + " ORDER BY r.priority, r.id LIMIT %s FOR UPDATE OF r SKIP LOCKED",
             (older_than, wanted, wanted, limit),

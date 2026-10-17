@@ -301,7 +301,7 @@ class _MemoryTx:
             _with_user(self._t, r)
             for r in sorted(self._t.replies.values(), key=lambda r: (r.priority, r.id))
             if r.status == "unsent"
-            and r.ts < older_than
+            and (r.priority > 0 or r.ts < older_than)
             and r.id not in self._t.claimed
             and (channels is None or r.channel in channels)
         )

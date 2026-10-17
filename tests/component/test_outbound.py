@@ -239,9 +239,7 @@ async def test_the_sweeper_sends_the_announcement_on_telegram(
         clock,
         outbound=outbound(store, clock),
     )
-    assert await sweeper.sweep_once() == 0  # queued now, sent once it is 10 s old
-    clock.advance(timedelta(seconds=11))
-    assert await sweeper.sweep_once() == 1
+    assert await sweeper.sweep_once() == 1  # fanned out and sent in the same pass, no age wait
     sent = [p for method, p in rig.telegram.calls if method == "sendMessage"]
     assert [(p["chat_id"], p["text"]) for p in sent] == [
         ("4242", announcement_reply(ARTIST, "Pune", SHOW).text)

@@ -7,6 +7,7 @@ its own database (and the reader's pool is closed, `on_release`).
 import time
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
+from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 import psycopg
@@ -236,3 +237,30 @@ def test_p5_u09_past_date_never_reaches_the_form(app: AppTest, pg_migrated_url: 
     today = today_ist(datetime.now(UTC))
     assert app.date_input(key="announce_date").value == today
     assert not any(e.value == dashboard_text.PAST_DATE for e in app.error)
+
+
+@decision(60)
+def test_a_reload_keeps_the_signed_in_browser_signed_in(
+    app: AppTest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sign_in(app)
+    token = app.session_state["session_token"]
+    assert app.sidebar.radio  # signed in
+    # A reload is a new Streamlit session: no session_state, but the browser sends the cookie back.
+    monkeypatch.setattr(st, "context", SimpleNamespace(cookies={"crowdsense_session": token}))
+    reloaded = AppTest.from_file(APP, default_timeout=30).run()
+    assert not reloaded.exception and reloaded.sidebar.radio and not reloaded.text_input
+    monkeypatch.setattr(st, "context", SimpleNamespace(cookies={"crowdsense_session": "forged"}))
+    forged = AppTest.from_file(APP, default_timeout=30).run()
+    assert forged.text_input and not forged.sidebar.radio
+
+
+@decision(60)
+def test_sign_out_revokes_the_token(app: AppTest, monkeypatch: pytest.MonkeyPatch) -> None:
+    sign_in(app)
+    token = app.session_state["session_token"]
+    next(b for b in app.sidebar.button if b.label == "Sign out").click().run()
+    assert app.text_input  # back at the gate
+    monkeypatch.setattr(st, "context", SimpleNamespace(cookies={"crowdsense_session": token}))
+    again = AppTest.from_file(APP, default_timeout=30).run()
+    assert again.text_input and not again.sidebar.radio
