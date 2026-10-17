@@ -34,6 +34,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv lock --check
       - run: uv sync --locked
+      - run: uv run python -m scripts.sync_tokens --check # chat CSS and Streamlit theme match design/tokens.json
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run mypy
       - run: uv run pip-audit --skip-editable

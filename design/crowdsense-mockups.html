@@ -1,0 +1,1384 @@
+<!doctype html>
+<!-- Three Crowdsense UI directions, switchable with ?variant=editorial|signal|studio. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf6ef">
+  <title>Crowdsense — design directions</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #faf6ef;
+      --surface: #fffdf8;
+      --ink: #1a1a1a;
+      --muted: #6b645a;
+      --line: #e3dccf;
+      --accent: #e4572e;
+      --accent-ink: #1a1a1a;
+      --error: #8a1c1c;
+      --positive: #245b42;
+      --warning: #704700;
+      --warning-bg: #f6edda;
+      --soft-accent: #f8e7df;
+      --heading: Georgia, "Times New Roman", serif;
+      --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+      --radius: 12px;
+      --variant-accent: var(--accent);
+      --variant-soft: var(--soft-accent);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 var(--body);
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 3px solid #1a1a1a;
+      outline-offset: 3px;
+    }
+    .shell { max-width: 1440px; margin: 0 auto; padding: 0 28px 100px; }
+    .topbar {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; letter-spacing: -.03em; }
+    .brand-mark {
+      width: 30px; height: 30px; display: grid; place-items: center;
+      border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 17px;
+    }
+    .top-meta { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+    .prototype-label { border: 1px solid var(--line); background: var(--surface); padding: 5px 9px; border-radius: 999px; }
+    .intro { padding: 28px 0 18px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+    .eyebrow { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font: 400 clamp(28px, 4vw, 43px)/1.08 var(--heading); letter-spacing: -.035em; margin: 6px 0 8px; }
+    .intro p { color: var(--muted); max-width: 620px; margin: 0; }
+    .view-switch { display: flex; gap: 4px; padding: 4px; background: #efe8dc; border-radius: 9px; }
+    .view-switch button, .mode-switch button, .state-switch button, .variant-card {
+      border: 0; cursor: pointer;
+    }
+    .view-switch button { background: transparent; padding: 8px 12px; border-radius: 6px; color: var(--muted); font-weight: 650; }
+    .view-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px #1a1a1a15; }
+    .direction-wrap { margin: 12px 0 24px; }
+    .direction-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .direction-heading h2 { font: 400 18px var(--heading); margin: 0; }
+    .direction-heading p { color: var(--muted); font-size: 12px; margin: 0; }
+    .direction-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .direction-card {
+      appearance: none; text-align: left; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 13px; cursor: pointer; min-width: 0;
+    }
+    .direction-card[aria-pressed="true"] { outline: 2px solid var(--variant-accent); outline-offset: 1px; }
+    .direction-name { display: flex; align-items: center; justify-content: space-between; font-weight: 750; margin-bottom: 8px; }
+    .direction-name small { font-size: 11px; font-weight: 550; color: var(--muted); }
+    .mini-pair { display: grid; grid-template-columns: 1.5fr .8fr; gap: 8px; }
+    .mini-dashboard, .mini-phone { border: 1px solid var(--line); background: #f8f4eb; min-height: 86px; padding: 7px; border-radius: 7px; overflow: hidden; }
+    .mini-dashboard small, .mini-phone small { display: block; color: var(--muted); font-size: 8px; line-height: 1; margin-bottom: 5px; }
+    .mini-top { height: 7px; width: 60%; background: var(--mini, var(--accent)); border-radius: 4px; margin-bottom: 8px; }
+    .mini-stats { display: flex; gap: 5px; margin: 6px 0; }
+    .mini-stats i { height: 19px; flex: 1; border: 1px solid #e3dccf; background: #fffdf8; border-radius: 4px; }
+    .mini-lines { display: grid; gap: 4px; }
+    .mini-lines i { height: 4px; display: block; background: #d6cabb; border-radius: 4px; }
+    .mini-lines i:nth-child(2) { width: 72%; }
+    .mini-lines i:nth-child(3) { width: 86%; }
+    .mini-phone { background: var(--mini-phone, #fffdf8); }
+    .mini-bubble { width: 82%; height: 13px; background: #f0e9df; border-radius: 7px 7px 7px 2px; margin: 2px 0 6px; }
+    .mini-bubble.sent { width: 60%; margin-left: auto; background: var(--mini, var(--accent)); }
+    .variant-signal { --mini: #20433b; --mini-phone: #f7f3e9; }
+    .variant-studio { --mini: #315e91; --mini-phone: #f6f8fc; }
+    #app[data-variant="signal"] { --variant-accent: #20433b; --variant-soft: #e7eee8; --radius: 8px; }
+    #app[data-variant="studio"] { --variant-accent: #315e91; --variant-soft: #e8eef7; --radius: 9px; }
+    .app-area { min-height: 500px; }
+    .dashboard-head {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end;
+      padding: 21px 0 17px; border-bottom: 1px solid var(--line);
+    }
+    .artist-kicker { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .artist-name { font: 400 30px/1.1 var(--heading); margin: 6px 0 0; letter-spacing: -.03em; }
+    .dashboard-actions { display: flex; flex-wrap: wrap; justify-content: end; align-items: center; gap: 10px; }
+    .mode-switch {
+      display: inline-flex; gap: 3px; padding: 4px; border: 1px solid var(--line);
+      border-radius: 9px; background: var(--surface);
+    }
+    .mode-switch button { background: transparent; border-radius: 6px; padding: 7px 10px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .mode-switch button[aria-pressed="true"] { background: #efe8dc; color: var(--ink); }
+    .mode-note { color: var(--warning); background: var(--warning-bg); border-radius: 5px; padding: 3px 6px; font-size: 10px; font-weight: 750; }
+    .mode-note.real { color: var(--positive); background: #e7efe9; }
+    .freshness { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; font-size: 11px; }
+    .live-dot { width: 7px; height: 7px; background: #245b42; border-radius: 50%; display: inline-block; }
+    .primary {
+      background: var(--variant-accent); color: #fff; border: 1px solid var(--variant-accent);
+      min-height: 42px; padding: 9px 14px; border-radius: 8px; font-weight: 750; cursor: pointer;
+    }
+    #app[data-variant="editorial"] .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .primary:disabled { cursor: not-allowed; opacity: .5; }
+    .quiet { border: 1px solid var(--line); background: var(--surface); padding: 8px 11px; border-radius: 7px; cursor: pointer; }
+    .notice {
+      display: flex; align-items: start; gap: 10px; padding: 11px 13px; border-radius: 8px;
+      margin: 12px 0; color: var(--warning); background: var(--warning-bg); border: 1px solid #e6d4a9;
+    }
+    .notice strong { color: inherit; }
+    .notice p { margin: 1px 0 0; font-size: 12px; }
+    .notice.error { color: var(--error); background: #f9e9e5; border-color: #efc9bf; }
+    .notice.success { color: var(--positive); background: #e7efe9; border-color: #c7dbcd; }
+    .notice.neutral { color: var(--ink); background: #f1ece2; border-color: var(--line); }
+    .notice-icon { font-weight: 800; flex: 0 0 auto; }
+    .takeaway {
+      display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(245px, .65fr);
+      gap: 18px; padding: 20px; margin: 16px 0; border: 1px solid var(--line);
+      background: var(--surface); border-radius: var(--radius);
+    }
+    .takeaway h2 { font: 400 22px/1.2 var(--heading); margin: 5px 0 7px; }
+    .takeaway p { color: var(--muted); margin: 0; max-width: 660px; }
+    .takeaway-callout { border-left: 1px solid var(--line); padding-left: 18px; align-self: center; }
+    .takeaway-callout strong { display: block; font: 400 17px var(--heading); margin: 4px 0; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0 20px; }
+    .kpi {
+      padding: 13px 14px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius);
+      min-height: 91px;
+    }
+    .kpi-label { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .kpi strong { display: block; font: 400 25px/1.25 var(--heading); margin: 4px 0 1px; }
+    .kpi small { color: var(--muted); font-size: 10px; }
+    .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 10px; }
+    .section-title h2 { font: 400 21px var(--heading); margin: 0; }
+    .section-title p { color: var(--muted); margin: 0; font-size: 11px; }
+    .panel {
+      min-width: 0; border: 1px solid var(--line); background: var(--surface);
+      border-radius: var(--radius); padding: 16px; margin: 0 0 14px;
+    }
+    .section-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; align-items: start; }
+    .table-scroll { width: 100%; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; text-align: left; }
+    th { color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; padding: 8px; border-bottom: 1px solid var(--line); }
+    td { padding: 9px 8px; border-bottom: 1px solid #eee8dd; vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    .city-cell { font-weight: 700; white-space: nowrap; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 7px; font-size: 10px; font-weight: 750; white-space: nowrap; }
+    .badge.growing { background: #e7efe9; color: var(--positive); }
+    .badge.new { background: var(--variant-soft); color: var(--ink); }
+    .badge.steady { background: #f1ece2; color: var(--ink); }
+    .fill-cell { min-width: 92px; }
+    .fill-track { display: block; height: 5px; background: #eee8dd; border-radius: 5px; margin-top: 4px; overflow: hidden; }
+    .fill-track i { display: block; height: 100%; background: var(--variant-accent); border-radius: 5px; }
+    .chart { display: block; width: 100%; height: auto; min-height: 172px; }
+    .chart text { font: 10px var(--body); fill: var(--muted); }
+    .chart .axis { stroke: var(--line); stroke-width: 1; }
+    .chart .bar { fill: var(--variant-accent); }
+    .chart .bar-muted { fill: #cbbfae; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 11px; color: var(--muted); font-size: 10px; margin-top: 8px; }
+    .chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-dot { display: inline-block; width: 7px; height: 7px; background: var(--variant-accent); border-radius: 2px; }
+    .legend-dot.incomplete { background: #fff; border: 1px dashed var(--muted); }
+    .caption { color: var(--muted); font-size: 11px; margin: 8px 0 0; }
+    .heatmap-wrap { overflow: auto; }
+    .heatmap { min-width: 920px; }
+    .heatmap td, .heatmap th { text-align: center; padding: 7px 5px; }
+    .heatmap td:first-child, .heatmap th:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+    .heat-cell { min-width: 45px; border-radius: 4px; padding: 5px 2px; font-variant-numeric: tabular-nums; }
+    .heat-empty { color: #777064; background: #f5f1e9; }
+    .funnel-list { display: grid; gap: 8px; }
+    .funnel-row { display: grid; grid-template-columns: 60px minmax(40px, 1fr) 50px; align-items: center; gap: 8px; font-size: 11px; }
+    .funnel-track { height: 12px; border-radius: 6px; background: #f0ebe2; overflow: hidden; }
+    .funnel-track i { display: block; height: 100%; background: var(--variant-accent); border-radius: inherit; }
+    .funnel-count { text-align: right; font-variant-numeric: tabular-nums; }
+    .source-list { display: grid; gap: 10px; }
+    .source-row { display: grid; grid-template-columns: 75px 1fr 38px; align-items: center; gap: 8px; font-size: 11px; }
+    .source-row .funnel-track { height: 8px; }
+    .latest-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .latest-head p { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+    .email-value { font-variant-numeric: tabular-nums; }
+    .reveal-button { border: 0; padding: 4px 6px; background: transparent; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-size: 10px; }
+    .table-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; }
+    .state-tools {
+      margin: 18px 0 12px; padding: 12px; border: 1px dashed #b7ab9a; border-radius: var(--radius);
+      background: #f5f0e6;
+    }
+    .state-tools strong { font-size: 11px; }
+    .state-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .state-switch button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-height: 32px; padding: 5px 9px; font-size: 11px; }
+    .state-switch button[aria-pressed="true"] { border-color: var(--ink); font-weight: 750; }
+    .empty-state { text-align: center; padding: 40px 18px; }
+    .empty-state .empty-icon { font: 36px var(--heading); color: var(--variant-accent); }
+    .empty-state h2 { font: 400 25px var(--heading); margin: 8px 0; }
+    .empty-state p { color: var(--muted); max-width: 500px; margin: 0 auto 16px; }
+    .skeleton { display: none; }
+    .skeleton .sk { height: 70px; background: #efe8dc; border-radius: 8px; margin: 8px 0; }
+    .skeleton .sk.large { height: 220px; }
+    .login-state { max-width: 420px; margin: 48px auto; padding: 24px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); }
+    .login-state h2 { font: 400 26px var(--heading); margin-bottom: 5px; }
+    .login-state p { color: var(--muted); }
+    .login-state label { display: block; margin: 12px 0 5px; font-weight: 650; }
+    .login-state input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); }
+    .specs { margin-top: 20px; }
+    .specs-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 14px; }
+    .spec-list { display: grid; gap: 8px; }
+    .spec-item { padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+    .spec-item strong { display: block; font-size: 12px; }
+    .spec-item span { color: var(--muted); font-size: 11px; }
+    .chart-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .chat-shell { display: none; margin: 20px auto; max-width: 760px; }
+    .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 235px; gap: 16px; align-items: start; }
+    .phone {
+      border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--surface);
+      width: 100%; max-width: 560px; min-height: 760px; box-shadow: 0 8px 26px #2b1f1210;
+    }
+    .phone-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .artist-avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--variant-soft); color: var(--ink); font-weight: 800; }
+    .phone-head strong { display: block; }
+    .phone-head small { color: var(--muted); font-size: 11px; }
+    .chat-progress { margin-left: auto; border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; font-size: 10px; white-space: nowrap; }
+    .chat-log { min-height: 478px; max-height: 560px; overflow-y: auto; padding: 14px; background: #f8f4eb; }
+    .bubble { max-width: 88%; margin: 0 0 9px; padding: 10px 12px; border-radius: 13px 13px 13px 3px; background: var(--surface); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .bubble.fan { margin-left: auto; background: var(--variant-soft); border-color: transparent; border-radius: 13px 13px 3px 13px; }
+    .bubble.system { margin: 8px auto; color: var(--error); border-color: transparent; background: #f9e9e5; text-align: center; font-size: 12px; }
+    .typing { color: var(--muted); font-size: 12px; padding: 7px 12px; }
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 13px 9px; background: var(--surface); }
+    .chat-option {
+      min-height: 48px; padding: 9px 8px; border-radius: 9px; border: 1px solid var(--variant-accent);
+      background: var(--surface); color: var(--ink); text-align: left; cursor: pointer;
+    }
+    .chat-option:active { background: var(--variant-soft); }
+    .chat-option span { display: block; font-size: 11px; color: var(--muted); }
+    .chat-option.full { grid-column: 1 / -1; text-align: center; }
+    .chat-compose { display: none; align-items: center; gap: 7px; padding: 9px 12px; background: var(--surface); border-top: 1px solid var(--line); }
+    .chat-compose input { min-width: 0; flex: 1; height: 44px; border: 1px solid var(--line); border-radius: 99px; padding: 0 13px; background: #fff; color: var(--ink); }
+    .chat-compose input::placeholder, .login-state input::placeholder, .form-row input::placeholder { color: var(--muted); opacity: 1; }
+    .chat-compose button { min-height: 44px; border: 0; border-radius: 99px; background: var(--variant-accent); color: #fff; padding: 0 14px; cursor: pointer; font-weight: 700; }
+    #app[data-variant="editorial"] .chat-compose button { background: var(--accent); color: var(--accent-ink); }
+    .privacy-line { padding: 10px 14px 14px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 10px; }
+    .chat-side h2 { font: 400 20px var(--heading); margin: 4px 0 10px; }
+    .chat-side p { color: var(--muted); font-size: 12px; }
+    .chat-controls { display: grid; gap: 6px; }
+    .chat-controls button { min-height: 36px; text-align: left; padding: 6px 9px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 11px; }
+    .chat-controls button:hover, .state-switch button:hover, .quiet:hover, .chat-option:hover { background: var(--variant-soft); }
+    .chat-side .caption { margin: 10px 0; }
+    .dialog-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 10; padding: 18px;
+      background: #1a1a1a70; align-items: center; justify-content: center;
+    }
+    .dialog-backdrop.open { display: flex; }
+    .modal {
+      width: min(100%, 520px); max-height: min(92vh, 780px); overflow-y: auto; padding: 22px;
+      border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 16px 48px #0003;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+    .modal h2 { font: 400 25px var(--heading); margin: 0 0 4px; }
+    .modal p { color: var(--muted); font-size: 12px; }
+    .modal-close { border: 1px solid var(--line); border-radius: 50%; width: 34px; height: 34px; background: var(--surface); cursor: pointer; }
+    .form-row { margin: 14px 0; }
+    .form-row label { display: block; font-weight: 700; font-size: 12px; margin-bottom: 5px; }
+    .form-row select, .form-row input { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); }
+    .preview-card { padding: 12px; border: 1px solid var(--line); background: #f8f4eb; border-radius: 8px; margin: 12px 0; }
+    .preview-card .bubble { margin-bottom: 0; max-width: 100%; }
+    .audience-count { font: 400 18px var(--heading); }
+    .modal-actions { display: flex; justify-content: end; gap: 8px; margin-top: 17px; }
+    .secondary { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; min-height: 42px; padding: 8px 12px; cursor: pointer; }
+    .confirmation { display: none; }
+    .confirmation.visible { display: block; }
+    .direction-signal .takeaway { background: #20433b; color: #fff; border-color: #20433b; border-radius: 4px; }
+    .direction-signal .takeaway p, .direction-signal .takeaway .eyebrow { color: #f1f0e9; }
+    .direction-signal .takeaway-callout { border-color: #c1cfc6; }
+    .direction-signal .takeaway-callout strong { color: #fff; }
+    .direction-signal .takeaway .caption { color: #f1f0e9; }
+    .direction-signal .kpi { border-radius: 4px; }
+    .direction-signal .artist-name, .direction-signal .section-title h2 { font-family: var(--body); font-weight: 700; }
+    .direction-studio .dashboard-head { border-bottom: 0; background: #e8eef7; margin: 16px 0; padding: 20px; border-radius: 9px; }
+    .direction-studio .takeaway { grid-template-columns: 1fr; border-left: 4px solid #315e91; }
+    .direction-studio .takeaway-callout { border-left: 0; border-top: 1px solid var(--line); padding: 12px 0 0; }
+    .direction-studio .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .direction-studio .panel { box-shadow: 0 2px 8px #1b29400a; }
+    .direction-studio .chat-log { background: #f6f8fc; }
+    .direction-signal .chat-log { background: #f3f0e6; }
+    .direction-signal .phone { border-radius: 7px; box-shadow: none; }
+    .direction-studio .phone { border-radius: 12px; }
+    .footer-note { border-top: 1px solid var(--line); padding-top: 14px; color: var(--muted); font-size: 11px; margin-top: 22px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 900px) {
+      .shell { padding-left: 16px; padding-right: 16px; }
+      .section-grid { grid-template-columns: 1fr; }
+      .takeaway { grid-template-columns: 1fr; }
+      .takeaway-callout { border-left: 0; border-top: 1px solid var(--line); padding: 12px 0 0; }
+      .dashboard-actions { justify-content: start; }
+      .dashboard-head { align-items: start; grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell { padding: 0 12px 92px; }
+      .topbar { min-height: 58px; }
+      .top-meta .prototype-label { display: none; }
+      .intro { display: block; padding-top: 22px; }
+      .intro .view-switch { margin-top: 14px; width: max-content; }
+      .direction-heading { display: block; }
+      .direction-heading p { margin-top: 3px; }
+      .direction-grid { grid-template-columns: 1fr; }
+      .direction-card { padding: 10px; }
+      .mini-pair { grid-template-columns: 1fr .55fr; }
+      .mini-dashboard, .mini-phone { min-height: 67px; }
+      .dashboard-head { padding-top: 17px; }
+      .artist-name { font-size: 27px; }
+      .dashboard-actions { gap: 7px; }
+      .freshness { white-space: normal; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+      .kpi { min-height: 82px; padding: 10px; }
+      .kpi strong { font-size: 22px; }
+      .panel { padding: 12px; }
+      .section-title { display: block; }
+      .section-title p { margin-top: 4px; }
+      .specs-grid, .chart-specs { grid-template-columns: 1fr; }
+      .chat-layout { grid-template-columns: 1fr; }
+      .phone { min-height: 710px; }
+      .chat-side { display: grid; grid-template-columns: 1fr; }
+      .chat-log { min-height: 430px; }
+      .phone-head { padding: 10px 12px; }
+      .chat-shell { margin: 10px auto; }
+      .chat-option { min-height: 50px; }
+      .state-tools { padding: 10px; }
+      .latest-head { align-items: start; display: block; }
+      .latest-head .quiet { margin-top: 8px; }
+      .dialog-backdrop { padding: 9px; }
+      .modal { padding: 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app" data-variant="editorial">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">c</span><span>Crowdsense</span></div>
+      <div class="top-meta"><span>Product design study</span><span class="prototype-label">Clickable · fake data · no backend</span></div>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">Before the first ticket goes on sale</div>
+        <h1 id="page-title">A show, before the stage.</h1>
+        <p>Three ways to turn fan intent into a booking decision. Pick a direction, then explore the dashboard and the one-thumb fan chat.</p>
+      </div>
+      <div class="view-switch" role="group" aria-label="Choose screen">
+        <button type="button" data-view="dashboard" aria-pressed="true">Dashboard</button>
+        <button type="button" data-view="chat" aria-pressed="false">Fan chat</button>
+      </div>
+    </section>
+
+    <section class="direction-wrap" aria-labelledby="directions-title">
+      <div class="direction-heading">
+        <h2 id="directions-title">Three visual directions</h2>
+        <p>Each card previews a dashboard and mobile chat. Arrow keys also switch directions.</p>
+      </div>
+      <div class="direction-grid">
+        <button class="direction-card variant-editorial" type="button" data-variant="editorial" aria-pressed="true">
+          <span class="direction-name">01 · Warm editorial <small>Selected · Georgia + terracotta</small></span>
+          <span class="mini-pair" aria-hidden="true">
+            <span class="mini-dashboard"><small>Dashboard</small><i class="mini-top"></i><span class="mini-stats"><i></i><i></i><i></i></span><span class="mini-lines"><i></i><i></i><i></i></span></span>
+            <span class="mini-phone"><small>Fan chat</small><i class="mini-bubble"></i><i class="mini-bubble sent"></i><i class="mini-bubble"></i></span>
+          </span>
+        </button>
+        <button class="direction-card variant-signal" type="button" data-variant="signal" aria-pressed="false">
+          <span class="direction-name">02 · Signal / nightlife <small>Ink hero + field notes</small></span>
+          <span class="mini-pair" aria-hidden="true">
+            <span class="mini-dashboard"><small>Dashboard</small><i class="mini-top"></i><span class="mini-stats"><i></i><i></i><i></i></span><span class="mini-lines"><i></i><i></i><i></i></span></span>
+            <span class="mini-phone"><small>Fan chat</small><i class="mini-bubble"></i><i class="mini-bubble sent"></i><i class="mini-bubble"></i></span>
+          </span>
+        </button>
+        <button class="direction-card variant-studio" type="button" data-variant="studio" aria-pressed="false">
+          <span class="direction-name">03 · Clean product <small>Compact, scan-first</small></span>
+          <span class="mini-pair" aria-hidden="true">
+            <span class="mini-dashboard"><small>Dashboard</small><i class="mini-top"></i><span class="mini-stats"><i></i><i></i><i></i></span><span class="mini-lines"><i></i><i></i><i></i></span></span>
+            <span class="mini-phone"><small>Fan chat</small><i class="mini-bubble"></i><i class="mini-bubble sent"></i><i class="mini-bubble"></i></span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <main class="app-area" id="dashboard">
+      <div id="dashboard-screen">
+        <div class="dashboard-head">
+          <div>
+            <div class="artist-kicker"><span>Artist workspace · password protected</span><span aria-hidden="true">/</span><span>Demo artist</span></div>
+            <h2 class="artist-name">Aarav Sen</h2>
+          </div>
+          <div class="dashboard-actions">
+            <div class="mode-switch" role="group" aria-label="Dataset">
+              <button type="button" data-mode="simulated" aria-pressed="true">Simulated</button>
+              <button type="button" data-mode="real" aria-pressed="false">Real</button>
+            </div>
+            <span id="mode-note" class="mode-note">MADE-UP · NOT REAL DEMAND</span>
+            <span class="freshness"><i class="live-dot" aria-hidden="true"></i><span id="freshness">Demo snapshot · updated 3s ago · refreshes every 5s</span></span>
+            <button class="primary" type="button" id="open-announce">Announce a show</button>
+          </div>
+        </div>
+
+        <div id="notice-area" aria-live="polite"></div>
+        <div id="dashboard-content">
+          <section class="takeaway" aria-labelledby="takeaway-title">
+            <div>
+              <div class="eyebrow">The booking read</div>
+              <h2 id="takeaway-title">Start in Mumbai. Size for 1,016 people.</h2>
+              <p>342 counted fans point to Bandra Waterfront, with ₹1,500–3,000 the most-picked ticket range. This is stated intent from self-selected fans, not a sales forecast.</p>
+            </div>
+            <div class="takeaway-callout" id="takeaway-callout">
+              <div class="eyebrow">Evidence · simulated view</div>
+              <strong>342 fans · 8 weeks of signal</strong>
+              <span class="caption">The venue holds 4,000; the estimate stays below capacity.</span>
+            </div>
+          </section>
+          <div class="kpi-grid" id="kpi-grid"></div>
+
+          <section class="panel" aria-labelledby="ranked-title">
+            <div class="section-title">
+              <h2 id="ranked-title">Where to play next</h2>
+              <p>Expected people · 80% planning ceiling · ranked by fan count</p>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>City</th><th>Counted fans</th><th>Expected people</th><th>Suggested venue · capacity</th><th>Most-picked price</th><th>Trend</th></tr></thead>
+                <tbody id="city-rows"></tbody>
+              </table>
+            </div>
+            <p class="caption">Venue fit uses the smallest listed capacity that can accommodate the estimate with a 20% planning buffer. These are recommendations, not bookings.</p>
+          </section>
+
+          <div class="section-grid">
+            <section class="panel">
+              <div class="section-title"><h2>City demand</h2><p>Counted fans · sorted by city priority</p></div>
+              <svg class="chart" id="city-chart" viewBox="0 0 520 250" role="img" aria-label="Horizontal bars comparing counted fans by city"></svg>
+              <p class="caption">A ranked horizontal bar makes the strongest cities easy to scan before comparing venue capacity.</p>
+            </section>
+            <section class="panel">
+              <div class="section-title"><h2>Ticket budget</h2><p>Fan-selected bands</p></div>
+              <svg class="chart" id="budget-chart" viewBox="0 0 360 250" role="img" aria-label="Fans by preferred ticket budget band"></svg>
+              <p class="caption">Price bands are self-reported comfort ranges, not validated willingness to pay.</p>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="section-title"><h2>Group size</h2><p>How many people fans expect to bring</p></div>
+            <svg class="chart" id="group-chart" viewBox="0 0 520 190" role="img" aria-label="Fans by selected group size"></svg>
+            <p class="caption">Group sizes help estimate people, but remain stated intent rather than ticket purchases.</p>
+          </section>
+
+          <section class="panel">
+            <div class="section-title"><h2>City × venue</h2><p>Fan counts · blank cells mean the venue is in another city</p></div>
+            <div class="heatmap-wrap"><table class="heatmap" id="heatmap"><caption class="sr-only">Heatmap of fan counts for each city and each of the 14 venues</caption></table></div>
+            <p class="caption">Color intensity encodes the count. Counts are written into every occupied cell so color is not the only cue.</p>
+          </section>
+
+          <div class="section-grid">
+            <section class="panel">
+              <div class="section-title"><h2>Week-by-week, by city</h2><p>IST weeks · counts from completed weeks</p></div>
+              <svg class="chart" id="weekly-chart" viewBox="0 0 620 270" role="img" aria-label="Weekly fan counts for ten cities; current week is incomplete"></svg>
+              <div class="chart-legend"><span><i class="legend-dot"></i>Completed week</span><span><i class="legend-dot incomplete"></i>Current week · in progress, not compared</span></div>
+              <p class="caption">Growing means at least 20% above the previous completed week. New means the first week with data. The current partial week is never treated as a drop.</p>
+            </section>
+            <section class="panel">
+              <div class="section-title"><h2>Response funnel</h2><p>Chat health · not demand</p></div>
+              <div class="funnel-list" id="funnel-list"></div>
+              <p class="caption">Each count is the number who reached that step. Email is optional; drop-off here does not erase completed demand.</p>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="section-title"><h2>Where fans found the chat</h2><p>First-touch source tag · unknown stays visible</p></div>
+            <div class="source-list" id="source-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="latest-head">
+              <div><div class="section-title"><h2>Latest fans</h2><p>Most recent 50 · email hidden by default</p></div></div>
+              <button class="quiet" type="button" id="mask-emails">Mask all emails</button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Completed</th><th>City</th><th>Venue</th><th>Budget</th><th>Group</th><th>Email · session reveal only</th></tr></thead>
+                <tbody id="fan-rows"></tbody>
+              </table>
+            </div>
+            <p class="table-note">No export or download is available. Reveals exist only in this page session; simulated addresses are fictional.</p>
+          </section>
+        </div>
+
+        <div class="state-tools">
+          <strong>Dashboard states · click to preview</strong>
+          <div class="state-switch" role="group" aria-label="Dashboard state preview">
+            <button type="button" data-state="normal" aria-pressed="true">Normal</button>
+            <button type="button" data-state="login" aria-pressed="false">Password gate</button>
+            <button type="button" data-state="loading" aria-pressed="false">Loading skeleton</button>
+            <button type="button" data-state="empty" aria-pressed="false">Empty</button>
+            <button type="button" data-state="unreachable" aria-pressed="false">Database unreachable</button>
+            <button type="button" data-state="stale" aria-pressed="false">Stale data</button>
+            <button type="button" data-state="wrong-password" aria-pressed="false">Wrong password</button>
+            <button type="button" data-state="expired" aria-pressed="false">Session expired</button>
+          </div>
+        </div>
+        <div class="skeleton" id="skeleton" aria-label="Loading dashboard">
+          <div class="sk"></div><div class="sk"></div><div class="sk large"></div><div class="sk large"></div>
+        </div>
+        <div class="login-state" id="login-state" hidden>
+          <div class="eyebrow">Artist workspace · password protected</div>
+          <h2 id="login-title">Your session expired</h2>
+          <p id="login-copy">Sign in again to see this artist's demand. This prototype never sends a password anywhere.</p>
+          <form id="login-form">
+            <label for="demo-password">Dashboard password</label>
+            <input id="demo-password" type="password" autocomplete="current-password" placeholder="Enter demo password">
+            <p class="caption" id="password-error" role="alert"></p>
+            <button class="primary" type="submit">Sign in</button>
+          </form>
+        </div>
+        <section class="panel empty-state" id="empty-state" hidden>
+          <div class="empty-icon" aria-hidden="true">↗</div>
+          <div class="eyebrow">A quiet room, for now</div>
+          <h2>No fans yet</h2>
+          <p>Share your private fan link in an Instagram story, bio or show poster. The first answers will appear here; simulated and real responses stay in separate views.</p>
+          <button type="button" class="primary" id="copy-link">Copy your fan link</button>
+          <p class="caption" id="copy-status" aria-live="polite">Demo link: crowdsense.example/aarav</p>
+        </section>
+      </div>
+
+      <section class="chat-shell" id="chat-screen" aria-label="Fan chat preview">
+        <div class="chat-layout">
+          <div class="phone">
+            <div class="phone-head">
+              <div class="artist-avatar" aria-hidden="true">AS</div>
+              <div><strong>Aarav Sen</strong><small>Show updates · private chat</small></div>
+              <span class="chat-progress" id="chat-progress">Step 1 of 6</span>
+            </div>
+            <div class="chat-log" id="chat-log" aria-live="polite"></div>
+            <div id="chat-options" class="button-grid"></div>
+            <form class="chat-compose" id="chat-compose">
+              <label for="chat-input" class="sr-only">Your answer</label>
+              <input id="chat-input" autocomplete="off" maxlength="200" placeholder="Type your answer">
+              <button type="submit" id="chat-send">Send</button>
+            </form>
+            <div class="privacy-line">Privacy: your answers help plan shows. <b>/stop</b> to opt out · <b>/delete</b> to erase your data.</div>
+          </div>
+          <aside class="chat-side">
+            <div class="panel">
+              <div class="eyebrow">Built for one thumb</div>
+              <h2>Under 30 seconds</h2>
+              <p>Six short steps. City buttons use two columns. Venue choices include a capacity hint. Email is optional.</p>
+              <div class="chat-controls" role="group" aria-label="Chat interaction previews">
+                <button type="button" data-chat-action="restart">New fan · restart</button>
+                <button type="button" data-chat-action="returning">Returning fan</button>
+                <button type="button" data-chat-action="stale">Stale tap</button>
+                <button type="button" data-chat-action="invalid">Invalid input</button>
+                <button type="button" data-chat-action="rate">Rate limit</button>
+                <button type="button" data-chat-action="network">Network error</button>
+                <button type="button" data-chat-action="stop">/stop · opt out</button>
+                <button type="button" data-chat-action="delete">/delete · erase</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="eyebrow">Selected direction</div>
+              <h2 id="chat-direction">Warm editorial</h2>
+              <p>The full chat stays at 560px max width. The controls here are for preview only; choices and text are never sent to a server.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <section class="specs" id="design-notes">
+      <div class="section-title"><h2>What this direction is made of</h2><p>Tokens, components and chart rationale</p></div>
+      <div class="specs-grid">
+        <section class="panel">
+          <div class="eyebrow">Component list · direction 01</div>
+          <div class="spec-list">
+            <div class="spec-item"><strong>KPI tile</strong><span>One number, one label and one quiet qualifier; keeps the booking read scannable.</span></div>
+            <div class="spec-item"><strong>Ranked city row + trend badge</strong><span>Fan count and expected people stay separate; badge means ≥20% week-over-week or first week only.</span></div>
+            <div class="spec-item"><strong>Announce modal</strong><span>City and date, rendered message bubble, audience count, explicit second confirmation and queued state.</span></div>
+            <div class="spec-item"><strong>Chat bubble</strong><span>Bot and fan are distinct by alignment and surface, not color alone; errors remain readable in the log.</span></div>
+            <div class="spec-item"><strong>Button grid</strong><span>44px+ targets, two-column city choices and venue capacity as supporting text.</span></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="eyebrow">Chart specs</div>
+          <div class="chart-specs">
+            <div class="spec-item"><strong>City demand · horizontal bars</strong><span>Length = counted fans; sorted descending. Long city labels remain readable.</span></div>
+            <div class="spec-item"><strong>Ticket budget · vertical bars</strong><span>Band order is fixed low-to-high; compares discrete self-reported preferences.</span></div>
+            <div class="spec-item"><strong>Group size · vertical bars</strong><span>Fixed order from one person to six-plus; maps reported group choices into expected attendance.</span></div>
+            <div class="spec-item"><strong>City × venue · heatmap matrix</strong><span>Rows = cities, columns = 14 venues, color intensity = fan count; printed values preserve precision.</span></div>
+            <div class="spec-item"><strong>Weekly city growth · small multiples</strong><span>One row per city; bar height = completed-week fans. Partial current week is outlined, excluded from change.</span></div>
+            <div class="spec-item"><strong>Response funnel · horizontal bars</strong><span>Reached-step counts from consent through done; labeled as chat health, never booking demand.</span></div>
+            <div class="spec-item"><strong>Sources · horizontal bars</strong><span>Count per story, bio, poster or no-tag source; accommodates categorical names and unknowns.</span></div>
+          </div>
+        </section>
+      </div>
+      <p class="footer-note">Prototype only. Counts, people, venues, dates and email addresses are fake; there is no backend, persistence, message delivery or real authentication. In Streamlit, map the selected theme to primaryColor, backgroundColor, secondaryBackgroundColor and textColor; use native Streamlit components and CSS only via st.html.</p>
+    </section>
+  </div>
+
+  <div class="dialog-backdrop" id="announce-backdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="announce-title">
+      <div class="modal-head">
+        <div><div class="eyebrow">One message · real fans only</div><h2 id="announce-title">Announce a show</h2></div>
+        <button type="button" class="modal-close" id="close-announce" aria-label="Close">×</button>
+      </div>
+      <p>Preview the copy and audience before confirming. This prototype queues a demo state only; it sends nothing.</p>
+      <div class="form-row"><label for="announce-city">City</label><select id="announce-city"></select></div>
+      <div class="form-row"><label for="announce-date">Tickets open</label><input type="date" id="announce-date"></div>
+      <div class="preview-card"><div class="bubble" id="announce-preview" aria-live="polite"></div></div>
+      <p class="audience-count" id="audience-count"></p>
+      <div id="announce-notice" aria-live="polite"></div>
+      <div class="confirmation" id="announce-confirmation">
+        <div class="notice neutral"><span class="notice-icon">!</span><p><strong>Confirm this announcement</strong><br><span id="confirm-copy"></span><br>This is the final step. No message will actually be sent.</p></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" id="cancel-announce">Cancel</button>
+        <button type="button" class="secondary" id="review-announce">Review</button>
+        <button type="button" class="primary" id="confirm-announce" hidden>Confirm &amp; queue</button>
+      </div>
+    </section>
+  </div>
+
+  <nav class="prototype-switcher" aria-label="Switch design direction">
+    <button type="button" id="prev-variant" aria-label="Previous direction">←</button>
+    <span id="switcher-label">01 · Warm editorial</span>
+    <button type="button" id="next-variant" aria-label="Next direction">→</button>
+  </nav>
+  <style>
+    .prototype-switcher {
+      position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9;
+      display: flex; align-items: center; gap: 12px; padding: 7px 10px;
+      background: #1a1a1a; color: #fff; border: 1px solid #000; border-radius: 999px;
+      box-shadow: 0 6px 24px #0003; font-size: 11px; white-space: nowrap;
+    }
+    .prototype-switcher button {
+      width: 34px; height: 34px; border: 1px solid #fff8; border-radius: 50%;
+      background: transparent; color: #fff; cursor: pointer; font-size: 17px;
+    }
+    .prototype-switcher button:hover { background: #ffffff22; }
+  </style>
+  <script>
+    "use strict";
+    (() => {
+      const CITIES = ["Mumbai", "Delhi NCR", "Bengaluru", "Hyderabad", "Pune", "Kolkata", "Chennai", "Ahmedabad", "Jaipur", "Indore"];
+      const VENUES = [
+        ["Mumbai", "Mahalaxmi Maidan", 30000], ["Mumbai", "Bandra Waterfront", 4000],
+        ["Delhi NCR", "Dwarka Maidan", 25000], ["Delhi NCR", "Aerocity Terrace", 3500],
+        ["Bengaluru", "Whitefield Commons", 20000], ["Bengaluru", "Indiranagar Yard", 2000],
+        ["Hyderabad", "Gachibowli Fields", 18000], ["Pune", "Baner Greens", 12000],
+        ["Pune", "Koregaon Park Lawns", 6000], ["Kolkata", "Salt Lake Esplanade", 15000],
+        ["Chennai", "ECR Seafront", 12000], ["Ahmedabad", "Sabarmati Riverside", 10000],
+        ["Jaipur", "Jal Mahal Terrace", 5000], ["Indore", "Vijay Nagar Commons", 4000]
+      ];
+      const BUDGETS = ["Under ₹1,500", "₹1,500–3,000", "₹3,000–6,000", "₹6,000+"];
+      const GROUPS = ["1", "2", "3–5", "6+"];
+      const DIRECTIONS = [
+        ["editorial", "01 · Warm editorial", "Warm editorial"],
+        ["signal", "02 · Signal / nightlife", "Signal / nightlife"],
+        ["studio", "03 · Clean product", "Clean product"]
+      ];
+      const DATA = {
+        simulated: {
+          fans: [342, 284, 228, 182, 140, 116, 96, 78, 64, 44],
+          people: [1016, 842, 678, 521, 398, 310, 258, 205, 164, 121],
+          venues: ["Bandra Waterfront", "Aerocity Terrace", "Indiranagar Yard", "Gachibowli Fields", "Koregaon Park Lawns", "Salt Lake Esplanade", "ECR Seafront", "Sabarmati Riverside", "Jal Mahal Terrace", "Vijay Nagar Commons"],
+          capacities: [4000, 3500, 2000, 18000, 6000, 15000, 12000, 10000, 5000, 4000],
+          budgets: [312, 641, 428, 193],
+          groups: [426, 450, 500, 198],
+          sources: [["Story", 542], ["Bio", 388], ["Poster", 247], ["No tag", 397]],
+          funnel: [["Consent", 1800], ["City", 1738], ["Venue", 1654], ["Budget", 1560], ["Group", 1498], ["Email", 1428], ["Done", 1416]],
+          weekCounts: [[34, 38, 42, 49, 62, 14], [30, 32, 36, 40, 45, 9], [21, 25, 29, 32, 43, 11], [18, 19, 22, 25, 31, 8], [14, 16, 18, 21, 24, 6], [11, 13, 16, 17, 22, 5], [9, 12, 12, 15, 18, 5], [8, 9, 10, 12, 14, 3], [0, 0, 0, 0, 12, 4], [0, 0, 0, 0, 9, 2]],
+          total: 1574, expected: 4514, topBudget: "₹1,500–3,000", delta: "+18% vs last complete week"
+        },
+        real: {
+          fans: [8, 5, 7, 3, 6, 2, 4, 1, 0, 0],
+          people: [23, 16, 21, 9, 17, 6, 10, 2, 0, 0],
+          venues: ["Bandra Waterfront", "Aerocity Terrace", "Indiranagar Yard", "Gachibowli Fields", "Koregaon Park Lawns", "Salt Lake Esplanade", "ECR Seafront", "Sabarmati Riverside", "Jal Mahal Terrace", "Vijay Nagar Commons"],
+          capacities: [4000, 3500, 2000, 18000, 6000, 15000, 12000, 10000, 5000, 4000],
+          budgets: [10, 13, 9, 4],
+          groups: [10, 9, 13, 4],
+          sources: [["Story", 12], ["Bio", 8], ["Poster", 3], ["No tag", 13]],
+          funnel: [["Consent", 52], ["City", 47], ["Venue", 41], ["Budget", 37], ["Group", 34], ["Email", 32], ["Done", 31]],
+          weekCounts: [[0, 1, 1, 2, 3, 1], [0, 1, 0, 1, 2, 1], [0, 0, 1, 1, 3, 1], [0, 0, 0, 1, 1, 1], [0, 0, 1, 1, 2, 1], [0, 0, 0, 1, 1, 0], [0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 1, 0]],
+          total: 36, expected: 104, topBudget: "₹1,500–3,000", delta: "Small sample · directional only"
+        }
+      };
+      const root = document.getElementById("app");
+      const byId = (id) => document.getElementById(id);
+      let variant = new URLSearchParams(location.search).get("variant") || "editorial";
+      if (!DIRECTIONS.some(([key]) => key === variant)) variant = "editorial";
+      let mode = "simulated";
+      let state = "normal";
+      let revealed = new Set();
+      const queuedPairs = new Set();
+      let chatStep = "consent";
+      let chatTypingTimer = null;
+      let announceStage = "edit";
+      let refreshSeconds = 3;
+      let loginError = "";
+      const TODAY = new Date();
+      const todayString = new Date(TODAY.getTime() - TODAY.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+      function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+      function clear(node) { node.replaceChildren(); }
+      function fmt(n) { return Number(n).toLocaleString("en-IN"); }
+      function data() { return DATA[mode]; }
+      function announceName() { return DIRECTIONS.find(([key]) => key === variant)[2]; }
+
+      function setVariant(next, updateUrl = true) {
+        variant = next;
+        root.dataset.variant = next;
+        root.classList.remove("direction-signal", "direction-studio");
+        if (next !== "editorial") root.classList.add("direction-" + next);
+        document.querySelectorAll("[data-variant]").forEach((button) => {
+          if (button.classList.contains("direction-card")) button.setAttribute("aria-pressed", String(button.dataset.variant === next));
+        });
+        byId("switcher-label").textContent = DIRECTIONS.find(([key]) => key === next)[1];
+        byId("chat-direction").textContent = announceName();
+        if (updateUrl) {
+          const url = new URL(location.href);
+          url.searchParams.set("variant", next);
+          history.replaceState({}, "", url);
+        }
+      }
+      function setView(view) {
+        const dashboard = view === "dashboard";
+        byId("dashboard-screen").style.display = dashboard ? "block" : "none";
+        byId("chat-screen").style.display = dashboard ? "none" : "block";
+        document.querySelectorAll(".view-switch button").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.view === view)));
+        if (!dashboard) resetChat();
+      }
+      function showNotice(kind, title, detail) {
+        const box = el("div", "notice " + kind);
+        box.append(el("span", "notice-icon", kind === "error" ? "!" : "i"));
+        const content = el("div");
+        content.append(el("strong", "", title), el("p", "", detail));
+        box.append(content);
+        byId("notice-area").append(box);
+      }
+
+      function makeKpis() {
+        const d = data();
+        const list = [
+          ["Counted fans", fmt(d.total), mode === "simulated" ? "Separate simulated dataset" : "Real fans only · no simulated rows"],
+          ["Expected people", fmt(d.expected), "Group sizes applied to counted fans"],
+          ["Top city", "Mumbai", fmt(d.fans[0]) + " counted fans"],
+          ["Most-picked budget", d.topBudget, "Across this dataset"]
+        ];
+        const grid = byId("kpi-grid");
+        clear(grid);
+        list.forEach(([label, value, hint]) => {
+          const tile = el("article", "kpi");
+          tile.append(el("div", "kpi-label", label), el("strong", "", value), el("small", "", hint));
+          grid.append(tile);
+        });
+      }
+
+      function trendFor(index) {
+        if (data().fans[index] === 0) return ["No data", "steady"];
+        const counts = data().weekCounts[index];
+        const complete = counts.slice(0, 5);
+        if (complete.slice(0, -1).every((value) => value === 0) && complete[4] > 0) return ["New", "new"];
+        const previous = complete[3];
+        const current = complete[4];
+        if (previous > 0 && (current - previous) / previous >= 0.2) return ["Growing", "growing"];
+        return ["Steady", "steady"];
+      }
+      function renderCities() {
+        const d = data();
+        const tbody = byId("city-rows");
+        clear(tbody);
+        CITIES.forEach((city, i) => {
+          const tr = el("tr");
+          const trend = trendFor(i);
+          const cells = [
+            el("td", "city-cell", city),
+            el("td", "", fmt(d.fans[i])),
+            el("td", "", fmt(d.people[i]))
+          ];
+          const venueCell = el("td");
+          venueCell.append(el("span", "", d.venues[i]));
+          venueCell.append(el("br"));
+          venueCell.append(el("span", "caption", fmt(d.capacities[i]) + " seats"));
+          const fill = el("td", "fill-cell");
+          const ratio = d.people[i] / d.capacities[i];
+          fill.append(el("span", "", Math.round(ratio * 100) + "% capacity"));
+          const track = el("span", "fill-track");
+          const inside = el("i");
+          inside.style.width = Math.min(100, ratio * 100) + "%";
+          track.append(inside);
+          fill.append(track);
+          const price = el("td", "", ["₹1,500–3,000", "₹1,500–3,000", "₹3,000–6,000", "Under ₹1,500", "₹1,500–3,000", "₹3,000–6,000", "₹1,500–3,000", "Under ₹1,500", "₹1,500–3,000", "₹3,000–6,000"][i]);
+          const badge = el("td");
+          badge.append(el("span", "badge " + trend[1], trend[0]));
+          [...cells, venueCell, fill, price, badge].forEach((cell) => tr.append(cell));
+          tbody.append(tr);
+        });
+      }
+
+      function svgNode(name, attrs = {}) {
+        const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
+        return node;
+      }
+      function svgText(svg, x, y, text, anchor = "start") {
+        const node = svgNode("text", { x, y, "text-anchor": anchor });
+        node.textContent = text;
+        svg.append(node);
+      }
+      function renderCityChart() {
+        const svg = byId("city-chart");
+        clear(svg);
+        const values = data().fans;
+        const max = Math.max(...values) || 1;
+        CITIES.forEach((city, i) => {
+          const y = 20 + i * 22;
+          svgText(svg, 0, y + 10, city);
+          svg.append(svgNode("rect", { x: 110, y, width: Math.max(1, values[i] / max * 330), height: 13, rx: 3, class: "bar" }));
+          svgText(svg, Math.min(502, 117 + values[i] / max * 330), y + 10, fmt(values[i]));
+        });
+      }
+      function renderBudgetChart() {
+        const svg = byId("budget-chart");
+        clear(svg);
+        const values = data().budgets;
+        const max = Math.max(...values) || 1;
+        const labels = ["<₹1.5k", "₹1.5–3k", "₹3–6k", "₹6k+"];
+        values.forEach((value, i) => {
+          const x = 24 + i * 82;
+          const height = value / max * 160;
+          svg.append(svgNode("line", { x1: 16, y1: 190, x2: 345, y2: 190, class: "axis" }));
+          svg.append(svgNode("rect", { x, y: 190 - height, width: 45, height, rx: 4, class: "bar" }));
+          svgText(svg, x + 22, 208, labels[i], "middle");
+          svgText(svg, x + 22, 182 - height, fmt(value), "middle");
+        });
+      }
+      function renderGroupChart() {
+        const svg = byId("group-chart");
+        clear(svg);
+        const values = data().groups;
+        const max = Math.max(...values, 1);
+        const labels = ["1", "2", "3–5", "6+"];
+        values.forEach((value, i) => {
+          const x = 42 + i * 120;
+          const height = value / max * 118;
+          svg.append(svgNode("rect", { x, y: 145 - height, width: 62, height, rx: 4, class: "bar" }));
+          svgText(svg, x + 31, 162, labels[i] + (labels[i] === "1" ? " person" : " people"), "middle");
+          svgText(svg, x + 31, 137 - height, fmt(value), "middle");
+        });
+        svg.append(svgNode("line", { x1: 22, y1: 145, x2: 500, y2: 145, class: "axis" }));
+      }
+      function renderHeatmap() {
+        const table = byId("heatmap");
+        clear(table);
+        const header = el("thead");
+        const headRow = el("tr");
+        headRow.append(el("th", "", "City"));
+        VENUES.forEach((venue) => {
+          const th = el("th", "", venue[1]);
+          th.title = venue[0] + " · capacity " + fmt(venue[2]);
+          headRow.append(th);
+        });
+        header.append(headRow);
+        const body = el("tbody");
+        CITIES.forEach((city, cityIndex) => {
+          const row = el("tr");
+          row.append(el("th", "", city));
+          VENUES.forEach((venue, venueIndex) => {
+            const cell = el("td");
+            const cityVenues = VENUES.filter(([venueCity]) => venueCity === city);
+            const localVenueIndex = cityVenues.findIndex(([, name]) => name === venue[1]);
+            const count = venue[0] === city
+              ? Math.round(data().fans[cityIndex] * (cityVenues.length === 1 ? 1 : (localVenueIndex === 0 ? 0.63 : 0.37)))
+              : null;
+            const mark = el("span", "heat-cell " + (count === null ? "heat-empty" : ""), count === null ? "—" : fmt(count));
+            if (count !== null) {
+              const intensity = Math.min(.84, .14 + count / Math.max(...data().fans) * .66);
+              mark.style.backgroundColor = variant === "editorial" ? "rgba(228, 87, 46, " + intensity.toFixed(2) + ")" : variant === "signal" ? "rgba(32, 67, 59, " + intensity.toFixed(2) + ")" : "rgba(49, 94, 145, " + intensity.toFixed(2) + ")";
+              mark.style.color = intensity > .52 ? "#1a1a1a" : "#1a1a1a";
+              mark.setAttribute("aria-label", count + " fans");
+            }
+            cell.append(mark);
+            row.append(cell);
+          });
+          body.append(row);
+        });
+        table.append(header, body);
+      }
+      function renderWeekly() {
+        const svg = byId("weekly-chart");
+        clear(svg);
+        const d = data();
+        const max = Math.max(...d.weekCounts.flat(), 1);
+        const labels = ["5w ago", "4w ago", "3w ago", "2w ago", "Last wk", "This wk*"];
+        const labelX = 105;
+        labels.forEach((label, index) => svgText(svg, labelX + index * 80, 14, label, "middle"));
+        CITIES.forEach((city, cityIndex) => {
+          const y = 30 + cityIndex * 23;
+          svgText(svg, 0, y + 10, city);
+          d.weekCounts[cityIndex].forEach((value, weekIndex) => {
+            const width = Math.max(value ? 2 : 0, value / max * 53);
+            const x = labelX + weekIndex * 80 - 26;
+            const rect = svgNode("rect", { x, y, width, height: 12, rx: 2 });
+            if (weekIndex === 5) {
+              rect.setAttribute("fill", "none");
+              rect.setAttribute("stroke", "#6b645a");
+              rect.setAttribute("stroke-dasharray", "3 2");
+            } else {
+              rect.setAttribute("class", weekIndex === 4 ? "bar" : "bar-muted");
+            }
+            svg.append(rect);
+            if (value > 0) svgText(svg, x + width + 3, y + 10, String(value));
+          });
+        });
+        svgText(svg, 2, 263, "* In-progress week excluded from trend comparison");
+      }
+      function renderFunnel() {
+        const list = byId("funnel-list");
+        clear(list);
+        const max = Math.max(...data().funnel.map(([, count]) => count), 1);
+        data().funnel.forEach(([label, count]) => {
+          const row = el("div", "funnel-row");
+          row.append(el("span", "", label));
+          const track = el("span", "funnel-track");
+          const fill = el("i");
+          fill.style.width = Math.max(1, count / max * 100) + "%";
+          track.append(fill);
+          row.append(track, el("span", "funnel-count", fmt(count)));
+          list.append(row);
+        });
+      }
+      function renderSources() {
+        const list = byId("source-list");
+        clear(list);
+        const max = Math.max(...data().sources.map(([, count]) => count), 1);
+        data().sources.forEach(([label, count]) => {
+          const row = el("div", "source-row");
+          row.append(el("span", "", label));
+          const track = el("span", "funnel-track");
+          const fill = el("i");
+          fill.style.width = Math.max(1, count / max * 100) + "%";
+          track.append(fill);
+          row.append(track, el("span", "funnel-count", fmt(count)));
+          list.append(row);
+        });
+      }
+
+      const firstNames = ["Mira", "Kabir", "Anya", "Rohan", "Ira", "Dev", "Naina", "Arjun", "Leela", "Neel", "Aditi", "Rehan", "Tara", "Vihaan", "Sana", "Ishaan", "Kavya", "Aarohi", "Om", "Zoya"];
+      const domains = ["mail.example", "inbox.example", "fan.example"];
+      function renderFans() {
+        const tbody = byId("fan-rows");
+        clear(tbody);
+        const d = data();
+        const sampleCount = Math.min(50, d.total);
+        for (let i = 0; i < sampleCount; i++) {
+          const position = (i + 0.5) * d.total / sampleCount;
+          let runningTotal = 0;
+          let cityIndex = 0;
+          for (; cityIndex < d.fans.length - 1; cityIndex++) {
+            runningTotal += d.fans[cityIndex];
+            if (position < runningTotal) break;
+          }
+          const name = firstNames[i % firstNames.length].toLowerCase();
+          const email = name + "." + String(140 + i) + "@" + domains[i % domains.length];
+          const row = el("tr");
+          row.append(el("td", "", "Oct " + String(17 - (i % 16)).padStart(2, "0") + ", 2026"));
+          row.append(el("td", "", CITIES[cityIndex]));
+          row.append(el("td", "", d.venues[cityIndex]));
+          row.append(el("td", "", BUDGETS[(i + cityIndex) % BUDGETS.length]));
+          row.append(el("td", "", GROUPS[(i * 3 + cityIndex) % GROUPS.length]));
+          const emailCell = el("td");
+          emailCell.append(el("span", "email-value", revealed.has(i) ? email : email.replace(/^(.).+(@.+)$/, "$1••••$2")));
+          const reveal = el("button", "reveal-button", revealed.has(i) ? "Hide" : "Reveal");
+          reveal.type = "button";
+          reveal.setAttribute("aria-label", (revealed.has(i) ? "Hide" : "Reveal") + " email for row " + (i + 1));
+          reveal.addEventListener("click", () => {
+            if (revealed.has(i)) revealed.delete(i); else revealed.add(i);
+            renderFans();
+          });
+          emailCell.append(reveal);
+          row.append(emailCell);
+          tbody.append(row);
+        }
+      }
+
+      function setMode(next) {
+        mode = next;
+        revealed.clear();
+        document.querySelectorAll("[data-mode]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.mode === next)));
+        const note = byId("mode-note");
+        note.textContent = next === "simulated" ? "MADE-UP · NOT REAL DEMAND" : "REAL FANS ONLY · SEPARATE DATASET";
+        note.className = "mode-note" + (next === "real" ? " real" : "");
+        byId("takeaway-title").textContent = next === "simulated" ? "Start in Mumbai. Size for 1,016 people." : "Mumbai leads the live sample. Treat it as a signal, not a forecast.";
+        const intro = byId("takeaway-title").nextElementSibling;
+        intro.textContent = next === "simulated"
+          ? "342 counted fans point to Bandra Waterfront, with ₹1,500–3,000 the most-picked ticket range. This is stated intent from self-selected fans, not a sales forecast."
+          : "8 real fans in this city chose Bandra Waterfront. A handful of self-selected responses cannot prove local demand; no simulated rows are included.";
+        byId("takeaway-callout").textContent = "";
+        const callout = document.querySelector(".takeaway-callout");
+        callout.append(el("div", "eyebrow", next === "simulated" ? "Evidence · simulated view" : "Evidence · real view"));
+        callout.append(el("strong", "", next === "simulated" ? "342 fans · 8 weeks of signal" : "8 fans · small sample"));
+        callout.append(el("span", "caption", next === "simulated" ? "The venue holds 4,000; the estimate stays below capacity." : "The estimate is 23 people, against 4,000 seats."));
+        renderAll();
+        if (state === "normal") {
+          clear(byId("notice-area"));
+          if (next === "real") showNotice("neutral", "Small sample · n = 36 fans", "Real data is shown exactly as collected. City-level trends and recommendations are directional only; simulated records are excluded.");
+        }
+        refreshAnnounce();
+      }
+      function renderAll() {
+        makeKpis();
+        renderCities();
+        renderCityChart();
+        renderBudgetChart();
+        renderGroupChart();
+        renderHeatmap();
+        renderWeekly();
+        renderFunnel();
+        renderSources();
+        renderFans();
+      }
+
+      function setState(next) {
+        state = next;
+        document.querySelectorAll("[data-state]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.state === next)));
+        byId("dashboard-content").hidden = false;
+        byId("skeleton").style.display = "none";
+        byId("login-state").hidden = true;
+        byId("empty-state").hidden = true;
+        byId("notice-area").replaceChildren();
+        if (next === "loading") {
+          byId("dashboard-content").hidden = true;
+          byId("skeleton").style.display = "block";
+          [0, 1, 2, 3].forEach((i) => {
+            const block = byId("skeleton").children[i];
+            block.style.width = i === 1 ? "100%" : (85 + i * 3) + "%";
+          });
+        } else if (next === "empty") {
+          byId("dashboard-content").hidden = true;
+          byId("empty-state").hidden = false;
+        } else if (next === "unreachable") {
+          showNotice("error", "Database unavailable · retrying", "Last successful snapshot is shown below. The dashboard will retry in 5 seconds; no numbers are being updated.");
+        } else if (next === "stale") {
+          showNotice("error", "Data may be stale", "Last successful update was 18 minutes ago. Refreshing every 5 seconds while the connection recovers.");
+          byId("freshness").textContent = "Last updated 18 min ago · retrying every 5s";
+        } else if (next === "login" || next === "wrong-password" || next === "expired") {
+          byId("dashboard-content").hidden = true;
+          byId("login-state").hidden = false;
+          byId("login-title").textContent = next === "expired" ? "Your session expired" : "Sign in to Crowdsense";
+          byId("login-copy").textContent = "This page is password-protected. Enter any value to preview the gate; nothing is transmitted.";
+          byId("password-error").textContent = next === "wrong-password" ? "Wrong password. Try again." : "";
+          byId("demo-password").value = "";
+          byId("demo-password").focus();
+        } else {
+          byId("freshness").textContent = "Demo snapshot · updated " + refreshSeconds + "s ago · refreshes every 5s";
+        }
+      }
+
+      function setupAnnounce() {
+        const select = byId("announce-city");
+        CITIES.forEach((city) => select.append(new Option(city, city)));
+        byId("announce-date").value = todayString;
+        byId("announce-date").addEventListener("change", refreshAnnounce);
+        select.addEventListener("change", refreshAnnounce);
+      }
+      function audienceFor(city) {
+        const idx = CITIES.indexOf(city);
+        return mode === "real" ? data().fans[idx] : 0;
+      }
+      function refreshAnnounce() {
+        const city = byId("announce-city").value || CITIES[0];
+        const dateValue = byId("announce-date").value || todayString;
+        const date = new Date(dateValue + "T12:00:00");
+        const formatted = date.toLocaleDateString("en-IN", { day: "numeric", month: "long" });
+        byId("announce-preview").textContent = "Aarav Sen is coming to " + city + ". Tickets open " + formatted + ".";
+        const count = audienceFor(city);
+        byId("audience-count").textContent = "Will send to " + fmt(count) + (count === 1 ? " fan" : " fans");
+        const area = byId("announce-notice");
+        clear(area);
+        let blocked = false;
+        if (mode === "simulated") {
+          blocked = true;
+          area.append(el("div", "notice neutral", "Simulated fans are fictional and can never be messaged. Switch to Real to preview the eligible audience."));
+        } else if (dateValue < todayString) {
+          blocked = true;
+          area.append(el("div", "notice error", "Choose today or a future date. This date has passed."));
+        } else if (count === 0) {
+          blocked = true;
+          area.append(el("div", "notice neutral", "Nobody to notify in this city."));
+        } else if (queuedPairs.has(city + "|" + dateValue)) {
+          blocked = true;
+          area.append(el("div", "notice success", "Already queued for this city and date. No duplicate announcement will be created."));
+        } else if (state === "unreachable") {
+          blocked = true;
+          area.append(el("div", "notice error", "The database cannot be reached. Try again after it recovers."));
+        }
+        byId("review-announce").disabled = blocked;
+        if (announceStage === "confirm" && !blocked) {
+          byId("announce-confirmation").classList.add("visible");
+          byId("confirm-announce").hidden = false;
+          byId("confirm-copy").textContent = "Will send to " + fmt(count) + " fans in " + city + " on " + formatted + ".";
+        } else {
+          byId("announce-confirmation").classList.remove("visible");
+          byId("confirm-announce").hidden = true;
+          if (blocked) announceStage = "edit";
+        }
+      }
+      function openAnnounce() {
+        announceStage = "edit";
+        byId("announce-backdrop").classList.add("open");
+        refreshAnnounce();
+        byId("announce-city").focus();
+      }
+      function closeAnnounce() { byId("announce-backdrop").classList.remove("open"); }
+
+      function addBubble(text, who = "bot") {
+        const node = el("div", "bubble " + who, text);
+        byId("chat-log").append(node);
+        byId("chat-log").scrollTop = byId("chat-log").scrollHeight;
+      }
+      const option = (label, value, hint = "", full = false) => ({ label, value, hint, full });
+      function question(step) {
+        const opts = {
+          consent: [option("Count me in", "yes"), option("No thanks", "no")],
+          city: CITIES.map((city) => option(city, city)),
+          venue: [...VENUES.filter(([city]) => city === chatCity).map(([, name, capacity]) => option(name, name, "Capacity " + fmt(capacity))), option("Other / not listed", "other", "", true)],
+          budget: BUDGETS.map((label) => option(label, label)),
+          group: GROUPS.map((label) => option(label + (label === "1" ? " person" : " people"), label)),
+          email: [option("Skip", "skip", "", true)],
+          returning: ["City", "Venue", "Budget", "Group", "All good"].map((label) => option(label, label)),
+          done: []
+        };
+        return opts[step] || [];
+      }
+      let chatCity = "Mumbai";
+      function drawOptions(step) {
+        const box = byId("chat-options");
+        clear(box);
+        question(step).forEach((item) => {
+          const button = el("button", "chat-option" + (item.full ? " full" : ""));
+          button.type = "button";
+          button.append(el("span", "", item.label));
+          if (item.hint) button.append(el("span", "", item.hint));
+          button.addEventListener("click", () => choose(item));
+          box.append(button);
+        });
+      }
+      function setProgress(step) {
+        const order = ["consent", "city", "venue", "budget", "group", "email"];
+        const index = order.indexOf(step === "venue-note" ? "venue" : step);
+        byId("chat-progress").textContent = step === "done" ? "Complete" : index >= 0 ? "Step " + (index + 1) + " of 6" : "Welcome back";
+      }
+      const prompts = {
+        consent: "Hi! Get updates when Aarav Sen plays near you. Answer a few quick questions so we can plan the right shows. Reply /stop any time to opt out.",
+        city: "Which city are you in?",
+        venue: "Where would you want to see the show?",
+        budget: "What ticket price feels comfortable?",
+        group: "How many people are coming?",
+        email: "Shows near you can sell out fast. Drop your email and we'll tell you when tickets open. Or tap Skip.",
+        returning: "Welcome back! Update anything?",
+        done: "You're in! We'll message you when Aarav Sen announces a show near you. Thanks for being here."
+      };
+      function ask(step) {
+        chatStep = step;
+        setProgress(step);
+        byId("chat-compose").style.display = step === "email" || step === "venue-note" ? "flex" : "none";
+        if (step === "venue-note") {
+          addBubble("Tell us the place.", "bot");
+          clear(byId("chat-options"));
+          byId("chat-input").placeholder = "Type a venue or place";
+          return;
+        }
+        if (step === "email") byId("chat-input").placeholder = "you@example.com";
+        addBubble(prompts[step] || prompts.done, "bot");
+        if (step === "done") {
+          clear(byId("chat-options"));
+          byId("chat-progress").textContent = "You're on the list";
+          return;
+        }
+        drawOptions(step);
+      }
+      function resetChat(isReturning = false) {
+        if (chatTypingTimer !== null) {
+          window.clearTimeout(chatTypingTimer);
+          chatTypingTimer = null;
+        }
+        chatCity = "Mumbai";
+        clear(byId("chat-log"));
+        clear(byId("chat-options"));
+        byId("chat-compose").style.display = "none";
+        if (isReturning) ask("returning");
+        else ask("consent");
+      }
+      function choose(item) {
+        if (chatStep === "returning") {
+          addBubble("✓ " + item.label, "fan");
+          clear(byId("chat-options"));
+          typeThen(() => {
+            if (item.value === "All good") { ask("done"); return; }
+            const target = { City: "city", Venue: "venue", Budget: "budget", Group: "group" }[item.value];
+            ask(target);
+          });
+          return;
+        }
+        addBubble("✓ " + item.label, "fan");
+        clear(byId("chat-options"));
+        if (chatStep === "consent" && item.value === "no") {
+          typeThen(() => {
+            addBubble("No problem. Message me any time.", "bot");
+            byId("chat-progress").textContent = "No worries";
+          });
+          return;
+        }
+        typeThen(() => {
+          if (chatStep === "consent") return ask("city");
+          if (chatStep === "city") { chatCity = item.value; return ask("venue"); }
+          if (chatStep === "venue") return item.value === "other" ? ask("venue-note") : ask("budget");
+          if (chatStep === "budget") return ask("group");
+          if (chatStep === "group") return ask("email");
+          if (chatStep === "email" && item.value === "skip") return ask("done");
+        });
+      }
+      function typeThen(callback) {
+        const typing = el("div", "typing", "Aarav is typing…");
+        byId("chat-log").append(typing);
+        byId("chat-log").scrollTop = byId("chat-log").scrollHeight;
+        if (chatTypingTimer !== null) window.clearTimeout(chatTypingTimer);
+        chatTypingTimer = window.setTimeout(() => {
+          chatTypingTimer = null;
+          typing.remove();
+          callback();
+        }, 380);
+      }
+      function sendChatText(text) {
+        const value = text.trim();
+        if (!value) return;
+        addBubble(value, "fan");
+        if (chatStep === "venue-note") {
+          if (value.length > 200) { addBubble("Please type the place name in a few words.", "system"); return; }
+          return ask("budget");
+        }
+        if (chatStep === "email") {
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) { addBubble("That doesn't look like an email. Send it again, or tap Skip.", "system"); return; }
+          return ask("done");
+        }
+        addBubble("Please tap one of the options.", "system");
+        drawOptions(chatStep);
+      }
+      function chatAction(action) {
+        if (action === "restart") return resetChat(false);
+        if (action === "returning") return resetChat(true);
+        if (action === "stale") { addBubble("That question has passed.", "system"); return; }
+        if (action === "invalid") { addBubble("Please tap one of the options.", "system"); drawOptions(chatStep); return; }
+        if (action === "rate") { addBubble("Too many messages. Wait a few seconds and try again.", "system"); return; }
+        if (action === "network") { addBubble("Network problem. Please try again.", "system"); return; }
+        if (action === "stop") { addBubble("/stop", "fan"); clear(byId("chat-options")); byId("chat-compose").style.display = "none"; addBubble("You're unsubscribed.", "bot"); byId("chat-progress").textContent = "Opted out"; return; }
+        if (action === "delete") { addBubble("/delete", "fan"); clear(byId("chat-options")); byId("chat-compose").style.display = "none"; addBubble("Your data is deleted.", "bot"); byId("chat-progress").textContent = "Data deleted"; return; }
+      }
+
+      document.querySelectorAll(".direction-card").forEach((button) => button.addEventListener("click", () => {
+        setVariant(button.dataset.variant);
+        renderHeatmap();
+      }));
+      document.querySelectorAll(".view-switch button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+      document.querySelectorAll("[data-mode]").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
+      document.querySelectorAll("[data-state]").forEach((button) => button.addEventListener("click", () => setState(button.dataset.state)));
+      document.querySelectorAll("[data-chat-action]").forEach((button) => button.addEventListener("click", () => chatAction(button.dataset.chatAction)));
+      byId("prev-variant").addEventListener("click", () => {
+        const i = DIRECTIONS.findIndex(([key]) => key === variant);
+        setVariant(DIRECTIONS[(i + DIRECTIONS.length - 1) % DIRECTIONS.length][0]);
+        renderHeatmap();
+      });
+      byId("next-variant").addEventListener("click", () => {
+        const i = DIRECTIONS.findIndex(([key]) => key === variant);
+        setVariant(DIRECTIONS[(i + 1) % DIRECTIONS.length][0]);
+        renderHeatmap();
+      });
+      document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && (target.matches("input, textarea, select, [contenteditable='true']"))) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          const i = DIRECTIONS.findIndex(([key]) => key === variant);
+          const offset = event.key === "ArrowRight" ? 1 : -1;
+          setVariant(DIRECTIONS[(i + offset + DIRECTIONS.length) % DIRECTIONS.length][0]);
+          renderHeatmap();
+        }
+      });
+      byId("open-announce").addEventListener("click", openAnnounce);
+      byId("close-announce").addEventListener("click", closeAnnounce);
+      byId("cancel-announce").addEventListener("click", closeAnnounce);
+      byId("announce-backdrop").addEventListener("click", (event) => { if (event.target === byId("announce-backdrop")) closeAnnounce(); });
+      byId("review-announce").addEventListener("click", () => { announceStage = "confirm"; refreshAnnounce(); });
+      byId("confirm-announce").addEventListener("click", () => {
+        queuedPairs.add(byId("announce-city").value + "|" + byId("announce-date").value);
+        announceStage = "edit";
+        refreshAnnounce();
+      });
+      byId("mask-emails").addEventListener("click", () => { revealed.clear(); renderFans(); });
+      byId("copy-link").addEventListener("click", () => {
+        const link = "https://crowdsense.example/aarav";
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(link).then(
+            () => { byId("copy-status").textContent = "Copied demo link: " + link; },
+            () => { byId("copy-status").textContent = "Copy unavailable. Share this demo link: " + link; }
+          );
+        } else {
+          byId("copy-status").textContent = "Share this demo link: " + link;
+        }
+      });
+      byId("login-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        byId("password-error").textContent = "Wrong password. Try again.";
+        byId("demo-password").value = "";
+        byId("demo-password").focus();
+      });
+      byId("chat-compose").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = byId("chat-input");
+        const text = input.value;
+        input.value = "";
+        sendChatText(text);
+      });
+      byId("announce-city").addEventListener("change", refreshAnnounce);
+
+      let pointer = 0;
+      window.setInterval(() => {
+        if (state === "normal") {
+          pointer = (pointer + 1) % 6;
+          refreshSeconds = pointer;
+          byId("freshness").textContent = "Demo snapshot · updated " + pointer + "s ago · refreshes every 5s";
+        }
+      }, 1000);
+      window.setInterval(() => {
+        if (state === "normal") {
+          pointer = 0;
+          refreshSeconds = 0;
+          byId("freshness").textContent = "Demo snapshot · updated 0s ago · refreshes every 5s";
+        } else if (state === "unreachable") {
+          byId("notice-area").setAttribute("aria-label", "Retrying database connection");
+        }
+      }, 5000);
+
+      setVariant(variant, false);
+      renderAll();
+      setState("normal");
+      setupAnnounce();
+      setMode("simulated");
+      resetChat(false);
+      document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => {
+        const url = new URL(location.href);
+        url.searchParams.set("view", button.dataset.view);
+        history.replaceState({}, "", url);
+      }));
+      const initialView = new URLSearchParams(location.search).get("view");
+      if (initialView === "chat") setView("chat");
+    })();
+  </script>
+</body>
+</html>
