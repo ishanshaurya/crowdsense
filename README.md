@@ -7,7 +7,7 @@
 
 Proof of concept: a simulated artist, about 20,000 simulated fans and about 10 real testers.
 
-[Try the bot on Telegram](https://t.me/crowdsense_live_bot)
+**Try it live:** [Telegram bot](https://t.me/crowdsense_live_bot) · [Web chat](https://crowdsense-production.up.railway.app/chat) · [Artist dashboard](https://positive-delight-production.up.railway.app) (password on request)
 
 ## Demo
 
