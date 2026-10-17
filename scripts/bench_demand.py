@@ -1,4 +1,4 @@
-"""Time every dashboard query (`docs/metrics.md`, "Dashboard query p95"). Read-only: safe anywhere.
+"""Time every dashboard query (`docs/architecture.md` §11). Read-only: safe anywhere.
 
     DASHBOARD_DATABASE_URL=postgresql://localhost:5433/bench uv run python -m scripts.bench_demand
     uv run --env-file .env python -m scripts.bench_demand --runs 20          # Supabase, as the role

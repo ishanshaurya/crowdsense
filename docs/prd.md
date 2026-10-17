@@ -1,61 +1,22 @@
 # PRD: Crowdsense
 
-What we build and why. How: `docs/architecture.md`. When: `docs/plan.md`. Why each choice: `docs/decisions.md`. Terms: `CONTEXT.md`. Review log: `docs/design-review.md`. Metrics: `docs/metrics.md`.
+What we build and why. How: `docs/architecture.md`. Key choices: `docs/decisions.md`; the tradeoffs behind them: `docs/design-review.md`.
 
 ## 1. Problem
 
-Artists and organisers must decide before spending money:
+Before booking a venue, an artist's team has to guess which city wants a show, how big the room should be, and what a ticket can cost. The usual inputs are social media follows, the last tour, and gut feel. None of them shows that anyone would actually buy, so every booking is a bet.
 
-- Which city has real fan demand
-- Which venue size fits the expected crowd
-- What ticket price fans will pay
-- How many shows a region needs
-- Whether demand is enough to book a venue at all
-
-Today they guess from:
-
-- Social media likes and follows
-- Past tour experience
-- Gut feel
-
-None of these show real intent to buy, so booking a venue is a gamble.
-
-**Our answer:** a chat bot collects structured fan intent. A dashboard turns it into demand insights and recommendations.
+Crowdsense replaces the guess with a chat bot that asks fans a few structured questions, and a dashboard that turns the answers into demand by city, a suggested venue and a price band.
 
 ## 2. Users
 
-### Primary: artist / management team
+**The artist or management team** wants to find the strong and under-explored cities before spending on a venue, estimate attendance, and know what price range fans accept. Today there is no reliable regional data, and marketing money goes out with unclear return.
 
-Goals:
-- Find high-demand and under-explored cities
-- Measure interest before booking venues
-- Estimate attendance
-- Know the price range fans accept
-- Pick where to launch the next show
-- Build a reusable audience list
-
-Pain points:
-- No reliable demand data
-- High risk in booking venues
-- Little insight into regional audiences
-- Costly marketing with unclear return
-
-### Secondary: fans
-
-Goals:
-- Register interest in a show near them
-- Hear first when tickets launch
-- Get updates for their city
-
-Pain points:
-- Miss ticket launches
-- Hear about shows too late
-- No simple way to say "I'd come"
+**Fans** want a simple way to say "I'd come to a show near me" and to hear first when tickets launch. Without that they miss launches or hear about shows late.
 
 ## 3. Value
 
-- **Artist:** turn fan chats into demand data before spending money.
-- **Fan:** one tap in a chat app to say "I'd come", then get told when it happens.
+For the artist, fan chats become demand data before any money is spent. For the fan, it is one tap in a chat app, then a message when the show is announced.
 
 ## 4. Features
 
@@ -130,10 +91,22 @@ Out of scope (later):
 - The answer shows on the dashboard within seconds.
 - Each city gets a venue, price band and priority.
 - Outbound message reaches opted-in testers only.
-- After the MVP (phase 6): measured numbers meet the targets in `docs/plan.md`; results recorded in `docs/metrics.md`.
+- After the MVP (phase 6): measured numbers meet the targets in `docs/architecture.md` §11.
 
 ## 7. Known limits
 
 - Fans who reply are self-selected, not a fair sample.
 - Stated intent is not a ticket purchase.
 - Simulated data shows the system works, not real demand.
+
+## 8. Status and roadmap
+
+Built, tested and tagged:
+
+1. The core: conversation flow as data, the engine, and a Postgres store and in-memory fake that pass the same tests.
+2. The Telegram adapter, with a webhook, inline buttons, deep-link source tags and a resend sweeper.
+3. A web chat on the same engine, plus a 20,000-fan seed. Its job is to show a channel can plug in without touching `core/`.
+4. The dashboard: live funnel, demand, venue, price band and city recommendations, with a Simulated / Real switch.
+5. Outbound announcements to the fans in a city, sent from a dashboard form. The app is also hosted on Railway.
+
+Next is phase 6, hardening: an inbox-first webhook (started on branch `phase6a`), load and resilience tests, observability, and a smaller tap latency. Later and not planned: WhatsApp, Instagram and Discord adapters, merging a fan across channels, LLM parsing of free text, and deposits or waitlists as a stronger demand signal.

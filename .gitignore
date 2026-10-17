@@ -9,3 +9,6 @@ __pycache__/
 .mypy_cache/
 .import_linter_cache/
 .recordings/
+
+# local-only notes and full-length docs, not pushed
+private/

@@ -6,22 +6,14 @@ Proof of concept: a simulated artist, ~20,000 simulated fans and ~10 real tester
 
 ## Docs
 
-Read in this order:
-
-| File                     | Answers                                          |
-| ------------------------ | ------------------------------------------------ |
-| `docs/prd.md`            | What we build and why                            |
-| `docs/architecture.md`   | How it's built                                   |
-| `docs/message-script.md` | What the bot says; messaging error handling      |
-| `docs/plan.md`           | Order of work (phases 0–6)                       |
-| `docs/metrics.md`        | Load, scale and bot-strength targets and results |
-| `docs/decisions.md`      | Every decision, numbered (#1–#115)                |
-| `docs/design-review.md`  | Why each decision was made; interview Q&A        |
-| `CONTEXT.md`             | Glossary                                         |
-| `testing/`               | Test plan per phase, scenarios, traceability     |
-| `notes/`                 | Per-phase build notes, measured numbers, interview Q&A |
-
-Rule: each fact lives in one file. Others point to it by decision number (`#n`).
+| File                     | What is in it                                   |
+| ------------------------ | ----------------------------------------------- |
+| `docs/prd.md`            | What it does, who it is for, status and roadmap |
+| `docs/architecture.md`   | How it is built, plus measured performance      |
+| `docs/decisions.md`      | The choices that shaped it                      |
+| `docs/design-review.md`  | The tradeoffs behind the main ones              |
+| `docs/message-script.md` | What the bot says                               |
+| `testing/`               | Test plan per phase, scenarios, traceability    |
 
 ## Code
 
@@ -32,12 +24,11 @@ api/         webhook service, web chat routes
 dashboard/   Streamlit app
 migrations/  Alembic schema
 scripts/     seed, dashboard role, benchmarks, webhook setup
-notes/       per-phase build notes
 ```
 
 ## Status
 
-Phases 1 to 5 are built and tested (tags `phase-2` to `phase-4`, `phase-5a`). Phase 6 (hardening) is next. See `docs/plan.md`.
+Phases 1 to 5 are built and tested (tags `phase-2` to `phase-4`, `phase-5a`). Phase 6 (hardening) is next. The roadmap is in `docs/prd.md` §8.
 
 ## Limits
 
@@ -62,4 +53,4 @@ uv run python -m scripts.set_webhook
 uv run --env-file .env python -m streamlit run dashboard/app.py
 ```
 
-Seed, dashboard role and benchmarks: "How to run" in `notes/phase-3.md` and `notes/phase-4.md`.
+Seed the simulated fans with `scripts/seed.py`, create the dashboard role with `scripts/dashboard_role.py`, and time things with `scripts/bench_*.py`. Each script says how to run it at the top.

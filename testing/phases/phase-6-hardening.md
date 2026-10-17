@@ -1,6 +1,6 @@
 # Phase 6: Hardening
 
-Adds the layers deferred from phases 1 to 5: contract, property, load and resilience. All earlier tests stay green. Items come from `docs/architecture.md` §10; tools from `docs/plan.md`; targets from `docs/metrics.md`. Targets are proposed; set them after measuring.
+Adds the layers deferred from phases 1 to 5: contract, property, load and resilience. All earlier tests stay green. Items come from `docs/architecture.md` §10; targets from `docs/architecture.md` §11. Targets are proposed; set them after measuring.
 
 ## Build
 
