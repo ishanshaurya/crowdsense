@@ -25,19 +25,6 @@ Proof of concept: a simulated artist, about 20,000 simulated fans and about 10 r
 
 The dashboard sits behind a password. Access is available on request.
 
-## Problem and MVP scope
-
-Artists book venues on guesswork. CrowdSense measures stated demand first, using a chat fans already use.
-
-**Core flow:** entry link → consent → city, venue, ticket price, group size (email optional) → counted fan → artist dashboard → one announcement to a city → `/stop` or `/delete` at any time.
-
-| In the MVP | Deliberately out |
-| --- | --- |
-| Telegram bot and web chat | WhatsApp, Instagram, Discord channels (parked, #7) |
-| Demand, venue, price and city recommendations | Ticket sales and payments |
-| One announcement per city, to consenting real fans | Campaigns beyond announcements (#64) |
-| Simulated and Real data views | Merging one person across channels (#37) |
-
 ## Architecture
 
 ```
@@ -62,16 +49,6 @@ Artists book venues on guesswork. CrowdSense measures stated demand first, using
 
  announcement_requests ─▶ sweeper ─▶ fan-out to consenting fans ─▶ replies ─▶ sender ─▶ Telegram
 ```
-
-**One message, end to end**
-
-1. The adapter parses the webhook into a common `InboundEvent`.
-2. The engine skips it if `(channel, message id)` was already seen.
-3. It finds or creates the fan under a lock, validates the answer, saves it and picks the next step.
-4. The turn's replies are saved as `unsent` and committed with the answer in one transaction.
-5. After the commit the adapter sends them. A sweeper resends anything still `unsent`.
-
-Details: [`docs/architecture.md`](docs/architecture.md)
 
 ## Channels are plugins
 
@@ -131,9 +108,7 @@ Single machine, Postgres 15 unless noted. Details in [`docs/metrics.md`](docs/me
 
 ## Limits
 
-- **Self-selection bias.** Only fans who open the bot and finish the chat are counted. They are keener than the average fan, so demand is likely overstated.
-- **Stated intent is not purchase.** Budget and "would you go" are answers, not sales. Expect a gap between what fans say and what they buy.
-- **Simulated data.** About 20,000 of the fans are generated and the dashboard defaults to that view. Only the roughly 10 real testers show in the Real view. Simulated numbers show the system at scale, not real demand.
+Only fans who finish the chat are counted, so demand is likely overstated. Stated intent is not purchase. About 20,000 fans are simulated; only about 10 are real testers.
 
 ## Stack
 
@@ -173,7 +148,6 @@ Seeding and the dashboard role: "How to run" in [`docs/notes/phase-3.md`](docs/n
 | [`docs/metrics.md`](docs/metrics.md) | Load, scale and bot-strength targets and results |
 | [`docs/message-script.md`](docs/message-script.md) | What the bot says; messaging error handling |
 | [`testing/`](testing) | Test plan per phase, scenarios, traceability |
-| [`docs/notes/`](docs/notes) | Per-phase build notes |
 
 ## License
 
