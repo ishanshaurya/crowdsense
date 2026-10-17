@@ -1,57 +1,145 @@
-# Design notes
+# CrowdSense: Design Decisions
 
-Nine choices where I weighed real options, with the tradeoff each time. The numbers in brackets point to `docs/decisions.md`.
+Architecture and stack: [`architecture.md`](architecture.md). Product scope: [`prd.md`](prd.md).
 
-## 1. Postgres, not Mongo or Redis (#26)
+## Summary
 
-Every dashboard view is a `GROUP BY` or a date bucket. In Mongo that becomes aggregation pipelines, which is a second query language for no gain. Redis would hold one row of state per fan and add a second system to run. At tens of thousands of rows any database copes, so I picked on the data model. If I outgrow Supabase, `pg_dump` moves it to any Postgres host.
+| Item | Detail |
+| --- | --- |
+| Product | Telegram bot collects fan answers; artist dashboard shows city, venue, price recommendations |
+| Channels | Telegram, web chat (same engine) |
+| Stack | Python, FastAPI, Postgres (Supabase), Streamlit, Railway |
+| Reliability | Crash never leaves a fan out of step |
+| Security | Leaked public Supabase key reaches no table |
+| Data integrity | Duplicate announcement cannot be queued |
+| Scale tested | 20,000 simulated fans, about 6 s to seed locally (not a load test) |
+| Latency | 1.2 to 1.5 s per tap; engine under 1 ms, rest is network |
+| Tests | 289 test functions across unit, component, quality suites |
 
-What I took from it: consent lives in the schema (per identity), answers are timestamped history rather than overwritten fields, and the dashboard never gets write access.
+## Decisions at a glance
 
-## 2. Save and send in one transaction (#55, #47, #72)
+| # | Problem | Chose | Rejected | Cost accepted |
+| --- | --- | --- | --- | --- |
+| 1 | Telegram send fails after state saved | One transaction for state + replies, send after commit, sweeper resends | Send first then save; do nothing | `replies` table; rare duplicate message |
+| 2 | Double tap looks identical to stale button | Answer spinner at once, tick after engine applies, 60 s in-process memory | Block until engine finishes | Restart in window shows one extra "That question has passed" |
+| 3 | Supabase roles read everything with RLS off | Revoke `anon` and `authenticated` on every object | RLS alone | Script outside migrations, plus per-migration closing |
+| 4 | Engine bug makes Telegram retry for hours | Roll back, return 200, one apology; DB outage still 5xx | Always 5xx | One apology instead of retries |
+| 5 | Editing an answer dropped fans from counts | `completed_at`, set once, never cleared | Staging copy of old answers | Edit does not make a new fan |
+| 6 | Counts by city, week, answer | Postgres | Mongo, Redis | None at this size; `pg_dump` keeps it portable |
+| 7 | 1,500 seed fans broke recommendations | 20,000 seed fans | Smaller seed | About 6 s to seed locally |
+| 8 | Postgres store and in-memory fake could drift | One contract suite against both | Test each separately | Slightly larger test setup |
+| 9 | Same announcement queued twice | Unique `(city, event_date)` | Idempotency key per send | Cannot resend a corrected announcement |
 
-The question: a fan taps a button, the state is saved, and then the Telegram send fails. They see nothing.
+## 1. Saving and sending
 
-- Send first, then save: a crash in between leaves the fan out of step with what we stored.
-- Do nothing special: the chat is stuck until the fan types `/start`.
-- **Chosen:** save state and replies together, send after commit, and let a sweeper resend anything unsent.
+- **Problem:** state saved, Telegram send fails, fan sees nothing
+- **Decision:** save state and replies in one transaction, send after commit, sweeper resends unsent
+- **Why:** only option where a crash cannot leave the fan out of step
+- **Rejected:**
+  - Send first, save second: breaks on crash in between
+  - Do nothing: chat stuck until `/start`
+- **Cost:** `replies` table; rare duplicate when crash lands between send and mark
+- **Mistake caught:** assumed Telegram retries the webhook; it does not, because we return 200
+- **Evidence:** [`api/sweeper.py`](../api/sweeper.py), [`api/sender.py`](../api/sender.py), [`tests/component/test_outbound.py`](../tests/component/test_outbound.py)
 
-It costs a `replies` table and, rarely, a duplicate message (a crash between send and mark). I first assumed Telegram would retry the webhook and cover this. It doesn't, because we return 200, so the sweeper had to exist.
+## 2. Double taps and stale buttons
 
-## 3. A fake store that has to pass the same tests (#54)
+- **Problem:** a tap answers once; only the engine knows if it was stale; double tap looks identical to old-button tap
+- **Decision:**
+  - Adapter answers spinner immediately
+  - Button swaps to ✓ after engine applies the tap
+  - Webhook remembers confirmed messages for 60 s
+- **Why:** fast feedback beats perfect spinner accuracy
+- **Cost:** memory is in-process; restart in window shows one extra "That question has passed"
+- **Edge case:** 403 means fan blocked the bot; pending replies are dropped, not retried
+- **Evidence:** [`api/taps.py`](../api/taps.py), [`api/sender.py`](../api/sender.py)
 
-There is a Postgres store and an in-memory fake. Nothing proved they behaved the same, so I run one contract suite against both from phase 1. It's cheap now and expensive to discover drift later. It's also what makes the fast tests trustworthy.
+## 3. Database permissions
 
-## 4. Once counted, always counted (#70)
+- **Problem:** Supabase `anon` and `authenticated` roles get full access with RLS off; public key could read, edit, delete fan data
+- **Decision:** revoke both roles on every table, sequence, function
+- **How:**
+  - Script does the revoking, not a migration (roles only exist on Supabase)
+  - Dashboard role can read and insert an announcement request (city, date)
+  - Each migration closes its own new objects
+- **Why:** safety does not depend on re-running the script
+- **Evidence:** [`scripts/lock_public_api.py`](../scripts/lock_public_api.py), [`scripts/dashboard_role.py`](../scripts/dashboard_role.py), [`tests/component/test_lock_public_api.py`](../tests/component/test_lock_public_api.py)
 
-"Counted" first meant "is on the done step". A returning fan who tapped "Edit city" moved back a step and vanished from every number, so the dashboard flickered mid-demo. The fix is one column, `completed_at`, set once and never cleared. The fan already said they want to come, and one edit doesn't make them a new person. Keeping a staging copy of old answers would have worked too, but it's far too much for an MVP.
+## 4. Bugs versus outages
 
-## 5. Bugs and outages get different responses (#71)
+- **Problem:** Telegram retries a failing webhook for hours; 5xx on a bug repeats the apology every retry
+- **Decision:**
+  - Bug: roll back the turn, return 200, send one apology
+  - DB outage: return 5xx (nothing saved, retry is free)
+- **Evidence:** [`api/webhooks.py`](../api/webhooks.py), [`tests/component/test_webhook.py`](../tests/component/test_webhook.py)
 
-Telegram retries a failing webhook for hours. If a bug crashes the engine and we return 5xx, the fan gets the same apology on every retry. So a bug rolls the turn back, returns 200 and sends one apology. A database outage still returns 5xx, because nothing was saved and a retry costs nothing.
+## 5. Who counts as a fan
 
-## 6. Double taps, stale taps and the lost spinner (#90 to #93)
+- **Problem:** "counted" meant "on done step"; "Edit city" moved fans back and they vanished from every number
+- **Decision:** `completed_at`, set once, never cleared
+- **Why:** fan already said they want to come; one edit is not a new person
+- **Rejected:** staging copy of old answers (too much for MVP)
+- **Evidence:** [`migrations/versions/0001_schema.py`](../migrations/versions/0001_schema.py)
 
-This took the most thinking. A tap can be answered only once, and only the engine knows whether it was stale, so the adapter answers the spinner at once and swaps the button for a ✓ only after the engine applied it. A real double tap looks identical to a tap on an old button, so the webhook remembers the messages it just confirmed for 60 seconds. That is in memory, so a restart in that window costs one extra "That question has passed" message, which I accepted. A 403 (bot blocked) drops the fan's pending replies instead of retrying them forever.
+## 6. Database
 
-## 7. 20,000 fans, not 1,500 (#78, #82)
+- **Problem:** dashboard needs counts by city, week, answer
+- **Decision:** Postgres, since every view is a `GROUP BY` or date bucket
+- **Rejected:**
+  - Mongo: aggregation pipelines, second query language, no gain
+  - Redis: one row of state per fan, extra system to run
+- **Why it fits:**
+  - Consent stored per identity in the schema
+  - Answers are timestamped history, not overwritten fields
+  - Dashboard has no write access
+- **Exit path:** `pg_dump` to any Postgres host
+- **Evidence:** [`core/store_postgres.py`](../core/store_postgres.py), [`core/demand_queries.py`](../core/demand_queries.py)
 
-My first seed had 1,500 fans. Every city then got its smallest venue as the suggestion, so the recommendation looked broken. I raised it to 20,000 and ran them through the real engine in memory, then bulk-copied the rows to Postgres. That takes about 6 seconds locally. It proves the logic at that size, but it is not a load test, because it skips the webhook and the network. The dashboard keeps simulated and real fans apart, and anyone who chats through the web chat counts as real.
+## 7. Seed size
 
-## 8. Locking the database down, not just the app (#108, #109, #115)
+- **Problem:** 1,500 fans gave every city its smallest venue; recommendation looked broken
+- **Decision:** 20,000 fans, enough spread per city
+- **Scope:**
+  - Runs through real engine in memory, bulk-copied to Postgres, about 6 s locally
+  - Not a load test (skips webhook and network)
+  - Dashboard separates simulated from real fans; web chat users count as real
+- **Evidence:** [`scripts/seed.py`](../scripts/seed.py), [`tests/component/test_demand_at_scale.py`](../tests/component/test_demand_at_scale.py)
 
-Supabase gives its `anon` and `authenticated` roles access to everything with row-level security off, so the public key could read, edit or delete fan data through the REST API. I revoke those roles on every table, sequence and function. A script does it rather than a migration, because the roles only exist on Supabase. The dashboard uses a role that can read, plus insert an announcement request with a city and a date. A migration also closes its own objects, so safety doesn't depend on someone remembering to re-run the script.
+## 8. Testing the store
 
-## 9. One announcement per city and date (#112)
+- **Problem:** Postgres store and in-memory fake, nothing proving they match
+- **Decision:** one contract suite runs against both from phase 1
+- **Why:** drift is cheap to catch early; keeps fast in-memory tests trustworthy
+- **Evidence:** [`tests/component/test_store_contract.py`](../tests/component/test_store_contract.py)
 
-I considered an idempotency key per send. Instead there is a unique constraint on `(city, event_date)`. The dashboard shows "Already queued" on a duplicate. The downside is that you can't resend a corrected announcement for the same show. I took that to keep the failure mode impossible rather than handled.
+## 9. Duplicate announcements
+
+- **Problem:** two people queue the same announcement for the same show
+- **Decision:** unique constraint on `(city, event_date)`; dashboard shows "Already queued"
+- **Why:** simplest way to make the duplicate impossible
+- **Rejected:** idempotency key per send
+- **Cost:** cannot resend a corrected announcement for the same show
+- **Evidence:** [`migrations/versions/0004_announcements.py`](../migrations/versions/0004_announcements.py)
 
 ## What I measured
 
-A tap took about 1.2 to 1.5 s to reach the next question. I timed each SQL statement and each Telegram call: the engine itself is under a millisecond on local Postgres, and the time goes on round trips to Supabase (about 45 ms each from my laptop) and to Telegram (about 180 ms). Reordering two calls saves about 360 ms. Hosting on Railway in Singapore doesn't remove the database distance.
+| Part | Time |
+| --- | --- |
+| Full tap to next question | 1.2 to 1.5 s |
+| Engine, local Postgres | under 1 ms |
+| Supabase round trip from laptop | about 45 ms each |
+| Telegram round trip | about 180 ms |
 
-## What I'd change
+- Time goes on round trips, not compute
+- Reordering two calls saves about 360 ms
+- Railway in Singapore does not remove the distance to the database
+- **Evidence:** [`scripts/bench_turn.py`](../scripts/bench_turn.py), [`scripts/bench_demand.py`](../scripts/bench_demand.py)
 
-- The web chat has no stable fan id, so a refresh is a new fan (#83). It's only the backup channel.
-- No minimum-sample handling: a city with three fans gets a recommendation as confident as one with three thousand (#74).
-- Stated intent isn't purchase, and only fans who finish the chat are counted. Both overstate demand. The README says so.
+## Known limits
+
+| Limit | Impact | Status |
+| --- | --- | --- |
+| Web chat has no stable fan id | Refresh makes a new fan | Accepted; backup channel only |
+| No minimum-sample handling | 3-fan city looks as confident as 3,000-fan city | Not done |
+| Stated intent is not a purchase | Demand overstated | Documented in README |
+| Only finished chats counted | Demand overstated | Documented in README |
