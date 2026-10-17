@@ -23,6 +23,7 @@ from core.decide import decide
 from core.types import FanState
 from tests.support import (
     ARTIST,
+    DECISIONS_FILE,
     FULL_FLOW,
     NOW,
     ROOT,
@@ -38,7 +39,10 @@ CODE_DIRS = ["core", "migrations", "scripts", "adapters", "api", "dashboard"]
 PURE_MODULES = ["types", "catalog", "flow", "decide", "insights"]
 MAX_FILE_LINES = 400
 MAX_FUNCTION_LINES = 40
-DECISIONS = (ROOT / "docs" / "decisions.md").read_text(encoding="utf-8")
+DECISIONS = DECISIONS_FILE.read_text(encoding="utf-8") if DECISIONS_FILE.exists() else ""
+needs_decisions = pytest.mark.skipif(
+    not DECISIONS_FILE.exists(), reason="docs/decisions.md is kept out of the public repo"
+)
 
 
 def python_files(*dirs: str) -> list[Path]:
@@ -162,6 +166,7 @@ def test_q08_no_todo_without_an_issue_id() -> None:
     assert offenders == []
 
 
+@needs_decisions
 def test_q10_venue_table_matches_catalog_and_migration_seed() -> None:
     rows = venue_table()
     assert len(rows) == 14
@@ -180,6 +185,7 @@ def test_q10_venue_names_have_no_type_words() -> None:
     assert [v.name for v in catalog.VENUES if words.search(v.name)] == []
 
 
+@needs_decisions
 def test_q10_option_lists_match_decisions_20_to_22() -> None:
     cities = decision_line(20).split("Cities:")[1].split("(")[0].strip().split(", ")
     assert cities == list(catalog.CITIES)
@@ -189,12 +195,14 @@ def test_q10_option_lists_match_decisions_20_to_22() -> None:
     assert groups == [o.label for o in catalog.GROUP_OPTIONS]
 
 
+@needs_decisions
 def test_q10_no_step_asks_timing() -> None:
     assert "timing" in decision_line(23).lower() and "removed" in decision_line(23).lower()
     for step in flow.STEPS:
         assert "timing" not in (step.id + step.prompt + (step.field or "")).lower()
 
 
+@needs_decisions
 def test_q10_every_decision_tag_exists_in_decisions_md() -> None:
     known = decision_numbers()
     assert {1, 20, 91} <= known

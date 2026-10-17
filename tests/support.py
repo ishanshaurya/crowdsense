@@ -111,9 +111,12 @@ def load_yaml(name: str) -> Any:
     return yaml.load((SCENARIOS / name).read_text(encoding="utf-8"), Loader=ScenarioLoader)
 
 
+DECISIONS_FILE = ROOT / "docs" / "decisions.md"
+
+
 def venue_table() -> list[tuple[str, str, int]]:
     """(city, venue, capacity) rows parsed from the venue table in docs/decisions.md."""
-    text = (ROOT / "docs" / "decisions.md").read_text(encoding="utf-8")
+    text = DECISIONS_FILE.read_text(encoding="utf-8")
     section = text.split("### Venue table", 1)[1].split("\n---", 1)[0]
     rows = []
     for line in section.splitlines():
