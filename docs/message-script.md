@@ -1,6 +1,6 @@
 # Message script
 
-What the bot says, and what the fan sees when messaging goes wrong. Structure and rules: `docs/architecture.md`. Terms: `CONTEXT.md`.
+What the bot says, and what the fan sees when messaging goes wrong. Structure and rules: `docs/architecture.md`. Terms: `docs/CONTEXT.md`.
 
 ## 1. Bot texts
 

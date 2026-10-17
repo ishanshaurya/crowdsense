@@ -161,7 +161,7 @@ uv run python -m scripts.set_webhook
 uv run --env-file .env python -m streamlit run dashboard/app.py
 ```
 
-Seeding and the dashboard role: "How to run" in [`notes/phase-3.md`](notes/phase-3.md) and [`notes/phase-4.md`](notes/phase-4.md).
+Seeding and the dashboard role: "How to run" in [`docs/notes/phase-3.md`](docs/notes/phase-3.md) and [`docs/notes/phase-4.md`](docs/notes/phase-4.md).
 
 ## Docs
 
@@ -173,7 +173,7 @@ Seeding and the dashboard role: "How to run" in [`notes/phase-3.md`](notes/phase
 | [`docs/metrics.md`](docs/metrics.md) | Load, scale and bot-strength targets and results |
 | [`docs/message-script.md`](docs/message-script.md) | What the bot says; messaging error handling |
 | [`testing/`](testing) | Test plan per phase, scenarios, traceability |
-| [`notes/`](notes) | Per-phase build notes |
+| [`docs/notes/`](docs/notes) | Per-phase build notes |
 
 ## License
 

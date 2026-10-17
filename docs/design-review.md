@@ -4,7 +4,7 @@ Why we decided what we decided. Use it to answer "why did you do it this way?"
 
 - Each entry: **Issue** → **Options** → **Chosen** → **Why**.
 - Decision numbers (#n) point to `docs/decisions.md`.
-- Terms: `CONTEXT.md`.
+- Terms: `docs/CONTEXT.md`.
 - Date: 2026-10-16.
 
 ## Contents
@@ -76,7 +76,7 @@ Missing, not module-shaped:
 | Gap                                                      | Verdict | Decision     |
 | -------------------------------------------------------- | ------- | ------------ |
 | Dashboard access control                                 | Do now  | #60          |
-| Glossary                                                 | Do now  | `CONTEXT.md` |
+| Glossary                                                 | Do now  | `docs/CONTEXT.md` |
 | Failure policy                                           | Do now  | #61, #71     |
 | Demo reset command                                       | Do now  | #62          |
 | Config module                                            | Do now  | #63          |
