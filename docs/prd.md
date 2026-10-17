@@ -1,6 +1,6 @@
 # PRD: Crowdsense
 
-What we build and why. How: `docs/architecture.md`. When: `docs/plan.md`. Why each choice: `docs/decisions.md`. Terms: `CONTEXT.md`. Review log: `docs/design-review.md`. Metrics: `docs/metrics.md`.
+What we build and why. How: `docs/architecture.md`. When: `docs/plan.md`. Why each choice: `docs/decisions.md`. Terms: `docs/CONTEXT.md`. Review log: `docs/design-review.md`. Metrics: `docs/metrics.md`.
 
 ## 1. Problem
 

@@ -1,7 +1,7 @@
 """What each simulated fan says, decided up front from one random seed (#40, #78, P3-U03).
 
 Pure: no I/O, no clock. `plan_fans` returns the turns; `scripts/seed.py` plays them through the
-engine. Shares and rates below were approved for phase 3 (notes/phase-3.md, "Seed shape").
+engine. Shares and rates below were approved for phase 3 (docs/notes/phase-3.md, "Seed shape").
 """
 
 import random
