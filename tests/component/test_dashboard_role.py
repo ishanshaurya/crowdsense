@@ -190,6 +190,21 @@ def test_role_can_ask_for_an_announcement_and_see_only_the_count(as_role) -> Non
     assert count is not None and count[0] >= 0
 
 
+@decision(80, 105, 108)
+def test_role_reads_announcement_history_through_the_function(as_role) -> None:  # type: ignore[no-untyped-def]
+    as_role.execute(
+        "INSERT INTO announcement_requests (city, event_date) VALUES ('Pune', '2026-12-01')"
+    )
+    cursor = as_role.execute("SELECT * FROM announcement_history()")
+    assert [c.name for c in cursor.description] == [
+        "city",
+        "event_date",
+        "status",
+        "recipients",
+        "created_at",
+    ]
+
+
 @decision(80, 105, 109)
 @pytest.mark.parametrize("statement", ANNOUNCEMENT_REFUSED)
 def test_role_cannot_set_anything_else_on_announcements(as_role, statement: str) -> None:  # type: ignore[no-untyped-def]

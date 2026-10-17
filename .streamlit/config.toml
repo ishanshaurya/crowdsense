@@ -11,6 +11,11 @@ gatherUsageStats = false
 toolbarMode = "minimal"
 showErrorDetails = "none"
 
+# tokens:start
 [theme]
 base = "light"
-primaryColor = "#7c3aed"
+primaryColor = "#0E6B66"
+backgroundColor = "#F0F2EE"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0F2A2B"
+# tokens:end

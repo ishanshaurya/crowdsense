@@ -11,7 +11,8 @@ Every grant is revoked first, then SELECT is granted on `fans`, `venues`, `funne
 columns of `identities`. The role also defaults to read-only transactions with a statement
 timeout, but the grants are the real guard. Phase 5 (#80): INSERT on two columns of
 `announcement_requests` (city, event_date) plus the RLS policy that lets that insert through,
-and EXECUTE on the count-only `announcement_audience_count`; never the audience rows.
+and EXECUTE on the count-only `announcement_audience_count` and the history function
+`announcement_history` (#80); never the audience rows or the table.
 """
 
 import argparse
@@ -29,7 +30,7 @@ from scripts.seed import guard_host
 READ_TABLES = ("fans", "venues", "funnel_counts")
 IDENTITY_COLUMNS = ("fan_id", "channel", "source_tag")
 REQUEST_COLUMNS = ("city", "event_date")
-COUNT_FUNCTION = "announcement_audience_count(text)"
+FUNCTIONS = ("announcement_audience_count(text)", "announcement_history()")
 CONNECTION_LIMIT = 5
 REDACTED = sql.Literal("<SCRAM verifier>")
 
@@ -53,7 +54,7 @@ def grant_statements(role: str = DASHBOARD_ROLE) -> list[sql.Composed]:
         "DROP POLICY IF EXISTS dashboard_insert ON announcement_requests",
         "CREATE POLICY dashboard_insert ON announcement_requests FOR INSERT TO {r} "
         "WITH CHECK (true)",
-        "GRANT EXECUTE ON FUNCTION {count_function} TO {r}",
+        *["GRANT EXECUTE ON FUNCTION " + f + " TO {r}" for f in FUNCTIONS],
     ]
     return [
         sql.SQL(s).format(
@@ -61,7 +62,6 @@ def grant_statements(role: str = DASHBOARD_ROLE) -> list[sql.Composed]:
             tables=tables,
             columns=columns,
             request_columns=request_columns,
-            count_function=sql.SQL(COUNT_FUNCTION),
         )
         for s in statements
     ]
@@ -119,7 +119,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     action = "created" if created else "updated"
     sys.stdout.write(
         f"host {host}: role {DASHBOARD_ROLE} {action}; SELECT on {tables}; "
-        f"INSERT on {inserts}; EXECUTE on {COUNT_FUNCTION}\n"
+        f"INSERT on {inserts}; EXECUTE on {', '.join(FUNCTIONS)}\n"
     )
 
 

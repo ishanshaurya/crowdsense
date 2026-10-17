@@ -47,6 +47,13 @@ def audience(conn: Conn, city: str = "Pune") -> list[tuple[Any, ...]]:
     return conn.execute("SELECT * FROM announcement_audience(%s)", (city,)).fetchall()
 
 
+FUNCTIONS = (
+    "announcement_audience(text)",
+    "announcement_audience_count(text)",
+    "announcement_history()",
+)
+
+
 @decision(75)
 def test_migration_cities_match_the_catalog() -> None:
     migration = importlib.import_module("migrations.versions.0004_announcements")
@@ -159,6 +166,22 @@ def test_rls_is_on_and_functions_are_not_public(db: Conn) -> None:
     assert rls == (True,)
     if not db.execute("SELECT 1 FROM pg_roles WHERE rolname = 'stranger'").fetchone():
         db.execute("CREATE ROLE stranger NOLOGIN")  # roles are cluster-wide
-    for fn in ("announcement_audience(text)", "announcement_audience_count(text)"):
+    for fn in FUNCTIONS:
         can = db.execute("SELECT has_function_privilege('stranger', %s, 'EXECUTE')", (fn,))
         assert can.fetchone() == (False,), fn
+
+
+@decision(80, 108)
+def test_0005_history_lists_newest_first_and_goes_down_and_up(pg_migrated_url: str) -> None:
+    with psycopg.connect(pg_migrated_url, autocommit=True) as conn:
+        for city, day in (("Pune", "2026-12-01"), ("Indore", "2026-12-02")):
+            conn.execute(
+                "INSERT INTO announcement_requests (city, event_date) VALUES (%s, %s)", (city, day)
+            )
+        rows = conn.execute("SELECT city, status, recipients FROM announcement_history()")
+        assert rows.fetchall() == [("Indore", "pending", None), ("Pune", "pending", None)]
+    migrate(pg_migrated_url, "0004", down=True)
+    with psycopg.connect(pg_migrated_url) as conn:
+        gone = conn.execute("SELECT to_regproc('announcement_history')").fetchone()
+    assert gone == (None,)
+    migrate(pg_migrated_url)

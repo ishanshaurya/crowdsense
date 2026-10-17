@@ -337,7 +337,7 @@ def test_reader_transactions_are_read_only(full, reader) -> None:  # type: ignor
 
 @decision(52, 57)
 def test_counted_rule_is_written_once() -> None:
-    source = (ROOT / "core" / "demand.py").read_text(encoding="utf-8")
+    source = (ROOT / "core" / "demand_queries.py").read_text(encoding="utf-8")
     assert source.count("completed_at IS NOT NULL") == 1
 
 

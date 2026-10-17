@@ -28,17 +28,20 @@ from tests.support import ARTIST, ROOT, decision
 
 APP = str(ROOT / "dashboard" / "app.py")
 GATE = "gate-password-123"  # pragma: allowlist secret
-VIEW_TITLES = {
-    "Recommendations by city",
-    "Top cities",
-    "Top venues",
-    "Budget bands",
+DASHBOARD_TITLES = {"Where to play next", "Demand trend"}
+ANALYTICS_TITLES = {
+    "Price range distribution",
     "Group sizes",
-    "City × venue",
-    "Response funnel",
-    "Growth per city (IST weeks)",
     "Sources",
+    "Response funnel",
+    "Growth per city",
     "Latest fans",
+}
+CITIES_TITLES = {"Rooms by city", "Budget by city"}
+PAGES = {
+    "dashboard": DASHBOARD_TITLES,
+    "analytics": ANALYTICS_TITLES,
+    "cities-venues": CITIES_TITLES,
 }
 
 
@@ -60,6 +63,16 @@ def sign_in(app: AppTest) -> AppTest:
     app.run()
     app.text_input[0].input(GATE)
     app.button[0].click().run()
+    assert not app.exception, app.exception
+    return app
+
+
+def go(app: AppTest, url_path: str) -> AppTest:
+    """Open a page by its URL path. `switch_page` only knows file pages; ours are functions."""
+    wanted = {url_path, ""} if url_path == "dashboard" else {url_path}  # the default page is ""
+    pages = app._registered_pages
+    app._page_hash = next(h for h, i in pages.items() if i.get("url_pathname") in wanted)
+    app.run()
     assert not app.exception, app.exception
     return app
 
@@ -87,33 +100,36 @@ def test_missing_settings_name_the_variable_only(app: AppTest, monkeypatch) -> N
 @decision(28, 106)
 def test_p4_c05_every_view_renders(app: AppTest) -> None:
     sign_in(app)
-    assert {s.value for s in app.subheader} == VIEW_TITLES
-    assert "Play **Pune** first, at **Koregaon Park Lawns**" in markdown(app)
-    assert "About **13 people** want to come" in markdown(app)
+    assert {s.value for s in app.subheader} == DASHBOARD_TITLES
+    assert "Pune · Koregaon Park Lawns" in markdown(app)
+    assert '<div class="stat-value">13</div>' in markdown(app)
     assert not app.error
+    for url_path in ("analytics", "cities-venues"):
+        assert {s.value for s in go(app, url_path).subheader} == PAGES[url_path]
+        assert not app.error
 
 
 @decision(18, 73, 107)
 def test_p4_u09_switch_defaults_to_simulated_and_changes_numbers(app: AppTest) -> None:
     sign_in(app)
     assert app.sidebar.radio[0].value == "simulated"
-    assert ":orange-badge[Simulated data] **9 counted fans** (11 started)" in markdown(app)
+    assert "Simulated dataset · 9 counted fans (11 started)" in markdown(app)
     app.sidebar.radio[0].set_value("real").run()
-    assert ":green-badge[Real] **1 counted fan** (2 started)" in markdown(app)
-    assert "Simulated data" not in markdown(app)
+    assert "Real data · 1 counted fan (2 started)" in markdown(app)
+    assert "Simulated dataset" not in markdown(app)
 
 
 @decision(18)
 def test_p4_c06_simulated_badge_only_on_simulated_data(app: AppTest) -> None:
     sign_in(app)
-    assert ":orange-badge[Simulated data]" in markdown(app)
+    assert "Simulated dataset" in markdown(app)
     app.sidebar.radio[0].set_value("real").run()
-    assert ":orange-badge" not in markdown(app) and ":green-badge[Real]" in markdown(app)
+    assert "Simulated dataset" not in markdown(app) and "Real data" in markdown(app)
 
 
 @decision(60)
 def test_p4_u11_email_column_hidden_until_toggled(app: AppTest) -> None:
-    sign_in(app)
+    go(sign_in(app), "analytics")
     latest = app.table[0].value
     assert "Email" not in latest.columns
     app.sidebar.toggle[0].set_value(True).run()
@@ -125,7 +141,7 @@ def test_p4_u11_email_column_hidden_until_toggled(app: AppTest) -> None:
 async def test_p4_c03_new_fan_appears_after_refresh(app: AppTest, pg_migrated_url: str) -> None:
     sign_in(app)
     app.sidebar.radio[0].set_value("real").run()
-    assert "**1 counted fan**" in markdown(app)
+    assert "1 counted fan (" in markdown(app)
     store = PostgresStore(pg_migrated_url)
     await talk(
         Engine(store, SystemClock(), artist_name=ARTIST),
@@ -136,7 +152,7 @@ async def test_p4_c03_new_fan_appears_after_refresh(app: AppTest, pg_migrated_ur
     committed = time.monotonic()
     st.cache_data.clear()  # stands in for the 4 s cache expiring
     app.run()
-    assert "**2 counted fans** (3 started)" in markdown(app)
+    assert "2 counted fans (3 started)" in markdown(app)
     assert time.monotonic() - committed < 10
 
 
@@ -159,9 +175,11 @@ def test_p4_u10_empty_database_shows_captions_not_blank_charts(
     _clear()
     app = sign_in(AppTest.from_file(APP, default_timeout=30))
     _clear()
-    assert {s.value for s in app.subheader} == VIEW_TITLES
-    assert [c.value for c in app.caption].count("Nothing in this view yet.") == len(VIEW_TITLES)
-    assert "**0 counted fans** (0 started)" in markdown(app)
+    assert "0 counted fans (0 started)" in markdown(app)
+    for url_path, titles in PAGES.items():
+        go(app, url_path)
+        assert {s.value for s in app.subheader} == titles
+        assert [c.value for c in app.caption].count("Nothing in this view yet.") == len(titles)
 
 
 def _eligible_fan(url: str, user: str, city: str = "Indore") -> None:
@@ -184,7 +202,7 @@ def _requests(url: str) -> list[tuple[object, ...]]:
 
 
 def _announce_form(app: AppTest, city: str) -> AppTest:
-    sign_in(app)
+    go(sign_in(app), "announcements")
     app.selectbox(key="announce_city").set_value(city).run()
     assert not app.exception, app.exception
     return app
@@ -264,3 +282,24 @@ def test_sign_out_revokes_the_token(app: AppTest, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(st, "context", SimpleNamespace(cookies={"crowdsense_session": token}))
     again = AppTest.from_file(APP, default_timeout=30).run()
     assert again.text_input and not again.sidebar.radio
+
+
+@decision(75, 80)
+def test_announcements_page_lists_what_was_queued(app: AppTest, pg_migrated_url: str) -> None:
+    _eligible_fan(pg_migrated_url, "a1")
+    _announce_form(app, "Indore")
+    assert any(c.value == "Nothing sent yet." for c in app.caption)
+    app.button(key="announce").click().run()
+    history = app.dataframe[0].value
+    assert list(history["City"]) == ["Indore"] and list(history["Status"]) == ["Waiting"]
+
+
+@decision(75)
+def test_header_button_opens_the_form_on_the_top_city(app: AppTest) -> None:
+    """Option A + C: the dialog opens on the hero's city (AppTest reruns the whole script, so
+    changes inside the dialog are checked on the Announcements page instead)."""
+    sign_in(app)
+    assert not app.selectbox
+    assert "Pune · Koregaon Park Lawns" in markdown(app)
+    app.button(key="open_announce").click().run()
+    assert app.selectbox(key="announce_city").value == "Pune"

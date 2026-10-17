@@ -73,6 +73,21 @@ def audience_count(conn: psycopg.Connection[Any], city: str) -> int:
     return int(row[0]) if row else 0
 
 
+@dataclass(frozen=True)
+class AnnouncementRow:
+    city: str
+    event_date: date
+    status: str  # 'pending' or 'fanned_out'
+    recipients: int | None
+    created_at: datetime
+
+
+def announcement_history(conn: psycopg.Connection[Any]) -> list[AnnouncementRow]:
+    """The newest requests, through a function: the role cannot read the table (#80)."""
+    rows = conn.execute("SELECT * FROM announcement_history()").fetchall()
+    return [AnnouncementRow(*row) for row in rows]
+
+
 def request_announcement(conn: psycopg.Connection[Any], city: str, event_date: date) -> bool:
     """The role's one write (#80); False when this city and date is already queued.
 

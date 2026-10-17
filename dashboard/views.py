@@ -1,159 +1,221 @@
-"""One draw function per view (`docs/architecture.md` §7). Streamlit only draws (Q-17)."""
+"""One draw function per page (`docs/architecture.md` §7). Streamlit only draws (Q-17)."""
 
+from collections.abc import Callable
+from html import escape
 from typing import Any
 
 import streamlit as st
 
+from core.catalog import VENUES
 from core.demand import DemandReport
+from core.overview import budget_stack, rooms_by_city
+from dashboard import charts
 from dashboard.text import (
-    BADGE_LABEL,
     GROUP_LABEL,
     NO_TAG,
     OTHER,
     STEP_LABEL,
     band_label,
     banner,
-    hero,
+    bar_row,
+    city_block_html,
+    fit_line,
+    fit_meter_html,
+    hero_meter_html,
+    recommendation_html,
+    stat_html,
+    strip_html,
+    trend_html,
+    trend_text,
     venue_label,
     week_label,
     when,
 )
 
 Table = list[dict[str, Any]]
+PlanShow = Callable[[str], None]
 EMPTY = "Nothing in this view yet."
+ROW_WIDTHS = [0.4, 1.2, 3.3, 1.4, 1.7, 1.5, 0.8, 1.3]
+ROW_HEADS = ["#", "City", "Room", "Expected crowd", "Room full", "Ticket price", "Trend"]
 
 
-def _section(title: str, data: object) -> bool:
-    """Heading, then a caption instead of an empty chart when the view has no data."""
+def _section(name: str) -> Any:
+    """A bordered block; Streamlit puts the key on the element as a class for the stylesheet."""
+    return st.container(border=True, key=f"sec_{name}")
+
+
+def _card(title: str, subtitle: str, data: object) -> bool:
+    """Card heading, then a caption instead of an empty chart when the view has no data."""
     st.subheader(title)
+    if subtitle:
+        st.caption(subtitle)
     if not data:
         st.caption(EMPTY)
     return bool(data)
 
 
 def draw_banner(report: DemandReport) -> None:
-    st.markdown(banner(report))
+    st.markdown(f'<div class="meta">{banner(report)}</div>', unsafe_allow_html=True)
 
 
-def draw_hero(report: DemandReport) -> None:
-    with st.container(border=True):
-        st.markdown(hero(report.recommendations[0] if report.recommendations else None))
-
-
-def draw_recommendations(report: DemandReport) -> None:
-    if not _section("Recommendations by city", report.recommendations):
-        return
-    rows: Table = [
-        {
-            "City": r.city,
-            "Expected people": r.attendance,
-            "Suggested venue": venue_label(r.venue),
-            "Capacity": r.venue.capacity if r.venue else None,
-            "Price band": band_label(r.price_band),
-            "Trend": BADGE_LABEL[r.badge],
-        }
-        for r in report.recommendations
-    ]
-    st.dataframe(rows, hide_index=True)
-
-
-def draw_cities(report: DemandReport) -> None:
-    if not _section("Top cities", report.cities):
-        return
-    data = {"City": [c.city for c in report.cities], "People": [c.people for c in report.cities]}
-    st.bar_chart(data, x="City", y="People", horizontal=True, sort=False)
-    st.dataframe(
-        [{"City": c.city, "Fans": c.fans, "People": c.people} for c in report.cities],
-        hide_index=True,
+def _strip(report: DemandReport) -> None:
+    kpis = report.overview.kpis
+    fill = f"{kpis.top_fill_percent}%" if kpis.top_fill_percent is not None else "–"
+    st.markdown(
+        strip_html(
+            [
+                (f"{kpis.counted:,}", "Interested fans", f"+{kpis.new_this_week:,} this week"),
+                (f"{kpis.cities:,}", "Cities with demand", f"{kpis.cities_growing} growing"),
+                (
+                    fill,
+                    "Fill of the top room",
+                    venue_label(kpis.top_venue) if kpis.top_venue else "No room yet",
+                ),
+                (trend_text_or_dash(report), "Weekly growth", "top city, against last week"),
+            ]
+        ),
+        unsafe_allow_html=True,
     )
 
 
-def draw_venues(report: DemandReport) -> None:
-    if not _section("Top venues", report.venues):
-        return
-    rows: Table = [
-        {"Venue": v.venue.name, "City": v.venue.city, "Fans": v.fans, "People": v.people}
-        for v in report.venues
-    ]
-    st.dataframe(rows, hide_index=True)
+def trend_text_or_dash(report: DemandReport) -> str:
+    kpis = report.overview.kpis
+    return trend_text(kpis.top_trend, kpis.top_trend_percent) if report.overview.ranked else "–"
 
 
-def draw_budget(report: DemandReport) -> None:
-    if not _section("Budget bands", report.budget.overall):
-        return
-    overall = report.budget.overall
-    data = {"Band": [band_label(b) for b in overall], "Fans": list(overall.values())}
-    st.bar_chart(data, x="Band", y="Fans", sort=False)
-    rows: Table = [
-        {"City": city} | {band_label(b): n for b, n in bands.items()}
-        for city, bands in report.budget.by_city.items()
-    ]
-    st.dataframe(rows, hide_index=True)
+def _recommendation(report: DemandReport, plan: PlanShow, details: Any) -> None:
+    top = report.overview.ranked[0] if report.overview.ranked else None
+    with st.container(key="hero"):
+        text, facts = st.columns([5, 4], gap="large", vertical_alignment="center")
+        with text:
+            st.markdown(recommendation_html(top), unsafe_allow_html=True)
+            if top is None or top.venue is None:
+                return
+            reason = f'<div class="rec-sub">{escape(fit_line(top))}</div>'
+            st.markdown(reason, unsafe_allow_html=True)
+            if st.button("Plan this show", key="plan_hero", type="primary"):
+                plan(top.city)
+            st.page_link(details, label="See every room")
+        with facts:
+            stats = [
+                ("Expected audience", f"{top.people:,}"),
+                ("Ticket price", band_label(top.price_band) or "–"),
+            ]
+            cells = "".join(f"<div>{stat_html(label, value)}</div>" for label, value in stats)
+            meter = hero_meter_html(top.fill_percent or 0, top.venue.capacity)
+            st.markdown(f'<div class="hero-stats">{cells}</div>{meter}', unsafe_allow_html=True)
 
 
-def draw_groups(report: DemandReport) -> None:
-    if not _section("Group sizes", report.groups):
-        return
-    groups = report.groups
-    data = {"Group": [GROUP_LABEL[g] for g in groups], "Fans": list(groups.values())}
-    st.bar_chart(data, x="Group", y="Fans", sort=False)
+def _ranked(report: DemandReport, plan: PlanShow) -> None:
+    with _section("ranked"):
+        if not _card(
+            "Where to play next",
+            "Ranked by fan demand, room fit and growth",
+            report.overview.ranked,
+        ):
+            return
+        for column, head in zip(st.columns(ROW_WIDTHS), ROW_HEADS, strict=False):
+            align = " num" if head == "Expected crowd" else ""
+            column.markdown(f'<span class="th{align}">{head}</span>', unsafe_allow_html=True)
+        for row in report.overview.ranked:
+            cells = st.columns(ROW_WIDTHS, vertical_alignment="center")
+            room = (
+                f'**{row.venue.name}** <span class="muted">{row.venue.capacity:,} seats</span>'
+                if row.venue
+                else OTHER
+            )
+            cells[0].markdown(f'<span class="muted">{row.rank}</span>', unsafe_allow_html=True)
+            cells[1].markdown(f"**{row.city}**")
+            cells[2].markdown(room, unsafe_allow_html=True)
+            cells[3].markdown(f'<span class="num">{row.people:,}</span>', unsafe_allow_html=True)
+            cells[4].markdown(
+                fit_meter_html(row.fill_percent, row.fill_percent)
+                if row.fill_percent is not None
+                else "–",
+                unsafe_allow_html=True,
+            )
+            cells[5].write(band_label(row.price_band) or "–")
+            cells[6].markdown(trend_html(row.trend, row.trend_percent), unsafe_allow_html=True)
+            if cells[7].button("Plan show", key=f"plan_{row.city}", type="tertiary"):
+                plan(row.city)
 
 
-def draw_heatmap(report: DemandReport) -> None:
-    if not _section("City × venue", report.heatmap):
-        return
-    cells: Table = [
-        {"City": c.city, "Venue": venue_label(c.venue), "Fans": c.fans} for c in report.heatmap
-    ]
-    venues = [*dict.fromkeys(c["Venue"] for c in cells if c["Venue"] != OTHER), OTHER]
-    axes = {
-        "x": {"field": "Venue", "type": "nominal", "sort": venues, "axis": {"labelAngle": -35}},
-        "y": {"field": "City", "type": "nominal"},
-    }
-    spec = {
-        "height": 360,
-        "layer": [
-            {
-                "mark": "rect",
-                "encoding": axes | {"color": {"field": "Fans", "type": "quantitative"}},
-            },
-            {"mark": "text", "encoding": axes | {"text": {"field": "Fans", "format": ","}}},
-        ],
-    }
-    st.vega_lite_chart(cells, spec)
+def _trend_chart(report: DemandReport) -> None:
+    with _section("trend_chart"):
+        totals = report.overview.week_totals
+        if not _card("Demand trend", "Fans who finished the chat, per IST week", totals):
+            return
+        st.vega_lite_chart(
+            [{"Week": week_label(w.week, w.in_progress), "Fans": w.fans} for w in totals],
+            charts.trend_spec(),
+        )
 
 
-def draw_funnel(report: DemandReport) -> None:
-    funnel = report.funnel
-    if not _section("Response funnel", funnel.by_furthest_step):
-        return
-    st.caption(f"{funnel.started:,} started · {funnel.completed:,} completed")
-    steps = funnel.by_furthest_step
-    data = {"Furthest step": [STEP_LABEL[s] for s in steps], "Fans": list(steps.values())}
-    st.bar_chart(data, x="Furthest step", y="Fans", sort=False)
+def draw_dashboard(report: DemandReport, plan: PlanShow, details: Any) -> None:
+    _recommendation(report, plan, details)
+    _strip(report)
+    _ranked(report, plan)
+    _trend_chart(report)
 
 
-def draw_weekly(report: DemandReport) -> None:
-    if not _section("Growth per city (IST weeks)", report.weekly):
-        return
-    data = {
-        "Week": [week_label(w.week, w.in_progress) for w in report.weekly],
-        "City": [w.city for w in report.weekly],
-        "Fans": [w.fans for w in report.weekly],
-    }
-    st.line_chart(data, x="Week", y="Fans", color="City")
-    badges = [f"{city}: {BADGE_LABEL[b]}" for city, b in report.growth.items() if b]
-    st.caption(" · ".join(badges) or "No city is growing this week.")
+def _price_donut(report: DemandReport) -> None:
+    with _section("price_donut"):
+        mix = report.overview.price_mix
+        if not _card("Price range distribution", "What fans are willing to pay", mix):
+            return
+        labels = [f"{band_label(s.key)} · {s.percent}%" for s in mix]
+        st.vega_lite_chart(
+            [{"Band": b, "Fans": s.fans} for b, s in zip(labels, mix, strict=True)],
+            charts.donut_spec(labels),
+        )
 
 
-def draw_sources(report: DemandReport) -> None:
-    if not _section("Sources", report.sources):
-        return
-    data = {
-        "Source": [tag or NO_TAG for tag in report.sources],
-        "Fans": list(report.sources.values()),
-    }
-    st.bar_chart(data, x="Source", y="Fans", sort=False)
+def _groups(report: DemandReport) -> None:
+    with _section("groups"):
+        mix = report.overview.group_mix
+        if _card("Group sizes", "Who is coming with whom", mix):
+            chips = "".join(
+                f'<span class="chip">{GROUP_LABEL[s.key]} <b>{s.percent}%</b></span>' for s in mix
+            )
+            st.markdown(chips, unsafe_allow_html=True)
+
+
+def _funnel(report: DemandReport) -> None:
+    with _section("funnel"):
+        steps = report.overview.funnel
+        if not _card("Response funnel", "Where fans stopped in the chat", steps):
+            return
+        funnel = report.funnel
+        st.caption(f"{funnel.started:,} started · {funnel.completed:,} completed")
+        st.markdown(
+            "".join(bar_row(STEP_LABEL[s.key], f"{s.fans:,}", s.percent) for s in steps),
+            unsafe_allow_html=True,
+        )
+
+
+def _sources(report: DemandReport) -> None:
+    with _section("sources"):
+        if _card("Sources", "Where fans found the chat", report.sources):
+            rows: Table = [
+                {"Source": tag or NO_TAG, "Fans": fans} for tag, fans in report.sources.items()
+            ]
+            st.dataframe(rows, hide_index=True)
+
+
+def _growth(report: DemandReport) -> None:
+    with _section("growth"):
+        if not _card("Growth per city", "Fans per IST week", report.weekly):
+            return
+        everyone = st.toggle("Show every city", value=False, key="growth_all")
+        shown = report.overview.top_growth_cities
+        rows = [w for w in report.weekly if everyone or w.city in shown]
+        st.vega_lite_chart(
+            [
+                {"Week": week_label(w.week, w.in_progress), "City": w.city, "Fans": w.fans}
+                for w in rows
+            ],
+            charts.growth_spec(),
+        )
 
 
 def latest_rows(report: DemandReport, show_emails: bool) -> Table:
@@ -173,25 +235,62 @@ def latest_rows(report: DemandReport, show_emails: bool) -> Table:
     return rows
 
 
-def draw_latest(report: DemandReport, show_emails: bool) -> None:
-    rows = latest_rows(report, show_emails)
-    if _section("Latest fans", rows):
-        st.table(rows, hide_index=True)  # st.table has no download button: emails never export
+def _latest(report: DemandReport, show_emails: bool) -> None:
+    with _section("latest"):
+        rows = latest_rows(report, show_emails)
+        if _card("Latest fans", "The 50 most recent", rows):
+            st.table(rows, hide_index=True)  # st.table has no download button: emails never export
 
 
-def draw_all(report: DemandReport, show_emails: bool) -> None:
-    draw_banner(report)
-    draw_hero(report)
-    draw_recommendations(report)
-    left, right = st.columns(2)
-    with left:
-        draw_cities(report)
-        draw_budget(report)
-        draw_funnel(report)
-    with right:
-        draw_venues(report)
-        draw_groups(report)
-        draw_sources(report)
-    draw_heatmap(report)
-    draw_weekly(report)
-    draw_latest(report, show_emails)
+def draw_analytics(report: DemandReport, show_emails: bool) -> None:
+    price, groups, sources = st.columns(3)
+    with price:
+        _price_donut(report)
+    with groups:
+        _groups(report)
+    with sources:
+        _sources(report)
+    funnel, growth = st.columns(2)
+    with funnel:
+        _funnel(report)
+    with growth:
+        _growth(report)
+    _latest(report, show_emails)
+
+
+def _rooms(report: DemandReport) -> None:
+    with _section("rooms"):
+        blocks = rooms_by_city(
+            report.recommendations,
+            ((cell.city, cell.fans) for cell in report.heatmap),
+            report.overview.ranked,
+            VENUES,
+        )
+        if not _card(
+            "Rooms by city",
+            "Each room against the city's expected crowd. The line marks 80% full.",
+            blocks,
+        ):
+            return
+        st.markdown("".join(city_block_html(block) for block in blocks), unsafe_allow_html=True)
+
+
+def _budget(report: DemandReport) -> None:
+    with _section("budget"):
+        if not _card(
+            "Budget by city", "What fans say they would pay for a ticket", report.budget.by_city
+        ):
+            return
+        stack = budget_stack(report.budget.by_city)
+        rows: Table = [
+            {"City": city, "Band": band_label(band), "Fans": fans}
+            for city, band, fans in stack.cells
+        ]
+        st.vega_lite_chart(
+            rows, charts.budget_spec(stack.cities, [band_label(b) for b in stack.bands])
+        )
+
+
+def draw_cities_venues(report: DemandReport) -> None:
+    _rooms(report)
+    _budget(report)

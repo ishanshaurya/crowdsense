@@ -70,7 +70,11 @@ def test_print_sql_needs_no_database(capsys: pytest.CaptureFixture[str]) -> None
     assert out.count("ALTER DEFAULT PRIVILEGES") == 3
 
 
-FUNCTIONS = ("announcement_audience(text)", "announcement_audience_count(text)")
+FUNCTIONS = (
+    "announcement_audience(text)",
+    "announcement_audience_count(text)",
+    "announcement_history()",
+)
 
 
 @decision(80, 108, 115)
