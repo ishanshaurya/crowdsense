@@ -90,7 +90,6 @@ Adding a channel changes no engine, flow, database or dashboard code. See [`adap
 | CI gates | ruff, mypy (strict), import-linter, pip-audit (dependency CVEs), detect-secrets, lockfile check, Postgres 16 service container |
 | CD | Containerised; Railway deploys the API after CI passes |
 | Operations | `/health` and `/ready` probes, secrets only through environment variables, pre-commit hooks |
-| Decision log | The main choices are numbered and explained in [`docs/decisions.md`](docs/decisions.md) |
 
 ## Measured results
 
@@ -144,7 +143,6 @@ Seed the simulated fans with `scripts/seed.py`, create the dashboard role with `
 | --- | --- |
 | [`docs/prd.md`](docs/prd.md) | What is built and why |
 | [`docs/architecture.md`](docs/architecture.md) | Components, data model, flow, failure handling, measured performance |
-| [`docs/decisions.md`](docs/decisions.md) | The choices that shaped it |
 | [`docs/design-review.md`](docs/design-review.md) | The tradeoffs behind the main ones |
 | [`docs/message-script.md`](docs/message-script.md) | What the bot says; messaging error handling |
 | [`testing/`](testing) | Test plan per phase, scenarios, traceability |
