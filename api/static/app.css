@@ -1,16 +1,21 @@
 * { box-sizing: border-box; }
 body {
   margin: 0 auto; max-width: 560px; min-height: 100vh; display: flex; flex-direction: column;
-  font: 16px/1.4 system-ui, sans-serif; background: #f4f4f6; color: #1c1c1e;
+  font: 16px/1.4 system-ui, sans-serif; background: #f6f1ea; color: #14121a;
 }
-header { padding: 12px 16px; font-weight: 600; background: #fff; border-bottom: 1px solid #ddd; }
+header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-weight: 600; background: #fff; border-bottom: 1px solid #ddd; }
 #log { flex: 1; padding: 12px 16px; overflow-y: auto; }
 .bubble { max-width: 85%; margin: 6px 0; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.bot { background: #fff; border: 1px solid #e2e2e6; }
-.fan { margin-left: auto; background: #2f6fed; color: #fff; }
+.bot { background: #fff; border: 1px solid #e3dccf; }
+.fan { margin-left: auto; background: #5a2d82; color: #fff; }
 .system { margin: 6px auto; background: none; color: #8a1c1c; font-size: 14px; text-align: center; }
 #buttons { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 8px; }
-#buttons button { padding: 8px 14px; border: 1px solid #2f6fed; border-radius: 18px; background: #fff; color: #2f6fed; font: inherit; }
+#buttons button { padding: 8px 14px; border: 1px solid #5a2d82; border-radius: 18px; background: #fff; color: #5a2d82; font: inherit; }
 #compose { display: flex; gap: 8px; padding: 10px 16px 16px; background: #fff; border-top: 1px solid #ddd; }
 #compose input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid #ccc; border-radius: 18px; font: inherit; }
-#compose button { padding: 8px 16px; border: 0; border-radius: 18px; background: #2f6fed; color: #fff; font: inherit; }
+#compose button { padding: 8px 16px; border: 0; border-radius: 18px; background: #5a2d82; color: #fff; font: inherit; }
+button { transition: background-color 0.18s ease, transform 0.18s ease; }
+button:hover { transform: translateY(-1px); }
+.bubble { animation: pop 0.22s ease-out both; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .bubble { animation: none; } button { transition: none; } }

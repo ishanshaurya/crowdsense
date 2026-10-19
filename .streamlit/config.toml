@@ -14,8 +14,8 @@ showErrorDetails = "none"
 # tokens:start
 [theme]
 base = "light"
-primaryColor = "#0E6B66"
-backgroundColor = "#F0F2EE"
+primaryColor = "#5A2D82"
+backgroundColor = "#F6F1EA"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#0F2A2B"
+textColor = "#14121A"
 # tokens:end
