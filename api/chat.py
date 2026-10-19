@@ -41,6 +41,7 @@ FILES = {
     "/chat": ("chat.html", "text/html; charset=utf-8"),
     "/chat/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/chat/app.css": ("app.css", "text/css; charset=utf-8"),
+    "/chat/logo.svg": ("logo.svg", "image/svg+xml"),
 }
 UNSENT_MAX_AGE = timedelta(minutes=10)
 

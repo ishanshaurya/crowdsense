@@ -1,4 +1,4 @@
-"""Crowdsense dashboard (#28): password gate (#60), Simulated / Real (#73), live refresh (#106).
+"""Roomcall dashboard (#28): password gate (#60), Simulated / Real (#73), live refresh (#106).
 
 Four pages (Dashboard, Analytics, Cities & Venues, Announcements) behind one sidebar. A page
 refreshes itself; "Announce a show" opens one dialog from the header or from a ranked row.
@@ -13,8 +13,9 @@ import os
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime
-from html import escape
+from itertools import cycle
 from pathlib import Path
+from typing import Any
 
 import streamlit as st
 
@@ -25,13 +26,14 @@ from core.demand import DEFAULT_VIEW, VIEWS, DemandReader, DemandReport, View
 from core.outbound import (
     announcement_history,
     announcement_reply,
+    announcement_totals,
     audience_count,
     request_announcement,
     today_ist,
 )
 from core.sessions import SESSION_SECONDS, SessionTokens
 from core.store import StoreUnavailable
-from dashboard import views
+from dashboard import markup, views
 from dashboard.text import (
     ALREADY_QUEUED,
     ANNOUNCE_TITLE,
@@ -48,6 +50,13 @@ CACHE_SECONDS = 4  # shared by every open tab: about one query batch per 5 s per
 FAILED_LOGIN_DELAY = 1.0
 COOKIE = "crowdsense_session"
 STYLE = Path(__file__).with_name("style.css")
+ASSETS = Path(__file__).with_name("assets")
+LOGO = (
+    ASSETS.joinpath("roomcall.svg")
+    .read_text(encoding="utf-8")
+    .replace("<svg ", '<svg width="36" height="36" ', 1)
+)
+ICON = str(ASSETS.joinpath("roomcall.png"))
 
 
 @st.cache_resource
@@ -122,7 +131,7 @@ def _live(view: View, show_emails: bool, draw: Callable[[DemandReport, bool], No
     draw(report, show_emails)
 
 
-def _announce_form(settings: DashboardSettings) -> None:
+def _announce_form(settings: DashboardSettings, ticket_slot: Any = None) -> None:
     """#75: the form only asks; the webhook service builds the audience and sends (#80).
 
     The database refuses a second request for a city and date; the button is also disabled for
@@ -139,6 +148,7 @@ def _announce_form(settings: DashboardSettings) -> None:
     except StoreUnavailable:
         st.error("The database cannot be reached. Try again in a moment.")
         return
+    (ticket_slot or st).html(markup.ticket(settings.artist_name, city, day, count))
     st.text(announcement_reply(settings.artist_name, city, day).text)  # plain, not markdown
     st.write(will_send(count))
     if count == 0:
@@ -236,26 +246,69 @@ def _draw_cities_venues(report: DemandReport, _show_emails: bool) -> None:
 def _announcements() -> None:
     settings = _settings()
     _header("Announcements", "Tell fans in one city when tickets open.", announce=False)
-    _, centre, _ = st.columns([1, 2, 1])
-    with centre:
-        with st.container(border=True):
-            st.subheader(ANNOUNCE_TITLE)
-            _announce_form(settings)
-        with st.container(border=True):
-            st.subheader("Sent and queued")
-            _history()
+    with st.container(key="stage"):
+        form, ticket = st.columns([4, 6], gap="large", vertical_alignment="center")
+        slot = ticket.container()
+        with form:
+            _announce_form(settings, slot)
+    rows = _history_rows()
+    waiting, sent = st.columns([5, 6], gap="large")
+    with waiting:
+        st.subheader("Where fans are waiting")
+        _city_tiles(rows)
+    with sent:
+        st.subheader("Sent and queued")
+        _history(rows)
 
 
-def _history() -> None:
+def _history_rows() -> list[Any] | None:
     try:
         with _reader().snapshot() as conn:
-            rows = announcement_history(conn)
+            return announcement_history(conn)
     except StoreUnavailable:
+        return None
+
+
+def _pick_city(city: str) -> None:
+    st.session_state.announce_city = city
+
+
+def _city_tiles(rows: list[Any] | None) -> None:
+    """One tile per city with its waiting fans; a tile picks the city in the form above."""
+    announced = {r.city for r in rows or []}
+    try:
+        with _reader().snapshot() as conn:
+            counts = {city: audience_count(conn, city) for city in CITIES}
+    except StoreUnavailable:
+        st.error("The database cannot be reached. Try again in a moment.")
+        return
+    columns = st.columns(2)
+    for city, column in zip(CITIES, cycle(columns), strict=False):
+        column.button(
+            f"{city}: {counts[city]} waiting",
+            icon=":material/check:" if city in announced else None,
+            key=f"tile_{city}",
+            on_click=_pick_city,
+            args=(city,),
+            type="primary" if st.session_state.get("announce_city") == city else "secondary",
+            use_container_width=True,
+        )
+
+
+def _history(rows: list[Any] | None) -> None:
+    if rows is None:
         st.error("The database cannot be reached. Try again in a moment.")
         return
     if not rows:
         st.caption("Nothing sent yet.")
         return
+    totals = announcement_totals(rows)
+    st.html(
+        '<div class="sent-strip">'
+        f"<div><b>{totals.announcements}</b><span>announcements</span></div>"
+        f"<div><b>{totals.fans_reached}</b><span>fans reached</span></div>"
+        f"<div><b>{totals.cities}</b><span>cities</span></div></div>"
+    )
     st.dataframe(
         [
             {
@@ -292,7 +345,8 @@ PAGES = [
 def _sidebar(settings: DashboardSettings) -> None:
     with st.sidebar:
         st.markdown(
-            '<div class="brand"><b>CrowdSense</b><br><span>Fan demand intelligence</span></div>',
+            f'<div class="brand">{LOGO}<div><b>Roomcall</b><br>'
+            "<span>Fan demand intelligence</span></div></div>",
             unsafe_allow_html=True,
         )
         for page in PAGES:
@@ -302,16 +356,12 @@ def _sidebar(settings: DashboardSettings) -> None:
             "Data", VIEWS, index=VIEWS.index(DEFAULT_VIEW), format_func=VIEW_LABEL.get, key="view"
         )
         st.toggle("Show emails (this session only)", value=False, key="emails")
-        name = escape(settings.artist_name)
-        st.markdown(
-            f'<div class="artist-card"><b>{name}</b><br><span>Artist account</span></div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(markup.artist_card(settings.artist_name), unsafe_allow_html=True)
         st.button("Sign out", on_click=_sign_out)
 
 
 def main() -> None:
-    st.set_page_config(page_title="Crowdsense", page_icon=":material/graphic_eq:", layout="wide")
+    st.set_page_config(page_title="Roomcall", page_icon=ICON, layout="wide")
     st.html(f"<style>{STYLE.read_text(encoding='utf-8')}</style>")
     try:
         settings = _settings()

@@ -2,24 +2,24 @@
 
 from typing import Any
 
-TEAL = "#0E6B66"
-INK = "#0F2A2B"
-GOLD = "#F3A712"
-PRICE_COLOURS = ["#CFE2DF", "#8FBFB8", "#4C9A93", TEAL, "#0A4A47"]
-CITY_COLOURS = [TEAL, GOLD, "#4C9A93", "#0A4A47", "#8FBFB8", "#52686A"]
+CURTAIN = "#5A2D82"
+INK = "#14121A"
+CORAL = "#FF6B57"
+PRICE_COLOURS = ["#E4D9EE", "#B79BD3", "#8A5FB5", CURTAIN, "#3B1B58"]
+CITY_COLOURS = [CURTAIN, CORAL, "#8A5FB5", "#3B1B58", "#B79BD3", "#5F5A68"]
 CONFIG = {
     "view": {"stroke": None},
     "font": "Hanken Grotesk",
     "axis": {
         "grid": True,
-        "gridColor": "#E4E9E5",
+        "gridColor": "#ECE5D9",
         "domain": False,
         "ticks": False,
-        "labelColor": "#52686A",
+        "labelColor": "#5F5A68",
         "labelFontSize": 12,
         "labelPadding": 6,
     },
-    "legend": {"labelColor": "#52686A", "labelFontSize": 12, "symbolSize": 80},
+    "legend": {"labelColor": "#5F5A68", "labelFontSize": 12, "symbolSize": 80},
 }
 WEEK_AXIS = {
     "labelAngle": 0,
@@ -37,8 +37,8 @@ def trend_spec() -> Spec:
         "height": 160,
         "config": CONFIG,
         "layer": [
-            {"mark": {"type": "area", "color": TEAL, "opacity": 0.1, "line": False}},
-            {"mark": {"type": "line", "color": TEAL, "strokeWidth": 2.5}},
+            {"mark": {"type": "area", "color": CURTAIN, "opacity": 0.1, "line": False}},
+            {"mark": {"type": "line", "color": CURTAIN, "strokeWidth": 2.5}},
         ],
         "encoding": {
             "x": {"field": "Week", "type": "ordinal", "axis": WEEK_AXIS},
