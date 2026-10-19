@@ -88,6 +88,20 @@ def announcement_history(conn: psycopg.Connection[Any]) -> list[AnnouncementRow]
     return [AnnouncementRow(*row) for row in rows]
 
 
+@dataclass(frozen=True)
+class AnnouncementTotals:
+    announcements: int
+    fans_reached: int
+    cities: int
+
+
+def announcement_totals(rows: list[AnnouncementRow]) -> AnnouncementTotals:
+    """The dashboard's summary strip; rows still waiting have no recipient count yet."""
+    return AnnouncementTotals(
+        len(rows), sum(r.recipients or 0 for r in rows), len({r.city for r in rows})
+    )
+
+
 def request_announcement(conn: psycopg.Connection[Any], city: str, event_date: date) -> bool:
     """The role's one write (#80); False when this city and date is already queued.
 

@@ -246,3 +246,17 @@ async def test_the_sweeper_sends_the_announcement_on_telegram(
     ]
     assert await unsent(store) == []
     await rig.close()
+
+
+def test_announcement_totals_count_waiting_rows_as_zero_fans() -> None:
+    from datetime import UTC, datetime
+
+    from core.outbound import AnnouncementRow, AnnouncementTotals, announcement_totals
+
+    now = datetime.now(UTC)
+    rows = [
+        AnnouncementRow("Mumbai", date(2026, 10, 19), "fanned_out", 3, now),
+        AnnouncementRow("Mumbai", date(2026, 10, 20), "pending", None, now),
+        AnnouncementRow("Pune", date(2026, 10, 20), "fanned_out", 2, now),
+    ]
+    assert announcement_totals(rows) == AnnouncementTotals(3, 5, 2)
