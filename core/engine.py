@@ -63,6 +63,7 @@ class Engine:
         clock: Clock,
         *,
         artist_name: str,
+        # Keep equal to the channels announcement_audience() reaches (migration 0004).
         push_channels: frozenset[str] = frozenset({"telegram"}),
         simulated: bool = False,
     ) -> None:
