@@ -12,7 +12,7 @@ import pytest
 from adapters.telegram import SECRET_HEADER
 from core import engine as engine_module
 from core.clock import ScriptedClock
-from core.flow import APOLOGY_TEXT, STALE_TEXT, STEP_BY_ID
+from core.flow import APOLOGY_TEXT, CONSENT_TEXT, INVALID_CHOICE_TEXT, STALE_TEXT, STEP_BY_ID
 from core.store import Store
 from tests.component.telegram_fake import (
     CHAT,
@@ -26,7 +26,7 @@ from tests.component.telegram_fake import (
     unhandled,
 )
 from tests.scenario_runner import check_final_db
-from tests.support import decision, load_yaml
+from tests.support import ARTIST, decision, load_yaml
 
 
 @pytest.fixture
@@ -136,6 +136,22 @@ async def test_p2_c08_sweeper_leaves_fresh_unsent_replies_alone(rig: Rig) -> Non
     assert await rig.sweeper.sweep_once() == 0
     assert [r.status for r in await rig.store.replies()] == ["unsent"]
     assert len(rig.telegram.sent()) == 1
+
+
+@decision(72)
+async def test_sweeper_keeps_a_fans_replies_in_order_when_one_fails(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(500, "down"), error(500, "down")]
+    await start(rig)
+    await rig.post(text_update("hello"))  # consent re-asked: a second unsent reply
+    assert [r.status for r in await rig.store.replies()] == ["unsent", "unsent"]
+    rig.clock.advance(timedelta(seconds=11))
+    rig.telegram.script["sendMessage"] = [error(500, "down")]
+    sent_before = len(rig.telegram.sent())
+    assert await rig.sweeper.sweep_once() == 0  # first failed, so the second waits
+    assert len(rig.telegram.sent()) == sent_before + 1
+    assert await rig.sweeper.sweep_once() == 2
+    texts = [p["text"] for p in rig.telegram.sent()[-2:]]
+    assert texts == [CONSENT_TEXT.format(artist=ARTIST), INVALID_CHOICE_TEXT]
 
 
 @decision(91, 92)
