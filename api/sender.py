@@ -1,7 +1,8 @@
 """Sending replies with Telegram's limits and failure rules (#69, #93).
 
 429 -> wait `retry_after`, then resend (the reply stays unsent meanwhile). 403 -> the fan blocked
-the bot. Anything else -> give up for now; the sweeper resends unsent replies later (#72).
+the bot. 400 -> refused for good: the fan's unsent replies are dropped, no opt-out. Anything
+else -> give up for now; the sweeper resends unsent replies later (#72).
 """
 
 import asyncio
@@ -10,7 +11,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable, Sequence
 
-from adapters.base import Adapter, Blocked, RetryAfter, SendError
+from adapters.base import Adapter, Blocked, Rejected, RetryAfter, SendError
 from core.engine import Engine, Outgoing
 from core.types import Reply
 
@@ -22,6 +23,7 @@ Sleep = Callable[[float], Awaitable[None]]
 class Outcome(enum.Enum):
     SENT = "sent"
     BLOCKED = "blocked"
+    REJECTED = "rejected"
     FAILED = "failed"
 
 
@@ -82,6 +84,9 @@ class Sender:
                 await self._sleep(exc.seconds)
             except Blocked:
                 return Outcome.BLOCKED
+            except Rejected as exc:
+                log.warning("%s refused the message, replies dropped: %s", adapter.channel, exc)
+                return Outcome.REJECTED
             except SendError as exc:
                 log.warning("%s send failed, left for the sweeper: %s", adapter.channel, exc)
                 return Outcome.FAILED
@@ -96,6 +101,8 @@ class Sender:
                 outcome = await self.send(adapter, user, out.reply)
                 if outcome is Outcome.BLOCKED:
                     await block(self._engine, adapter.channel, user)
+                elif outcome is Outcome.REJECTED:
+                    await self._engine.drop_unsent(adapter.channel, user)
                 if outcome is not Outcome.SENT:
                     return  # the rest stay unsent, in order, for the sweeper
                 await self._engine.mark_sent([out])

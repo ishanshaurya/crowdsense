@@ -49,8 +49,7 @@ class Sweeper:
             while await self._outbound.fan_out_next() is not None:
                 pass
         cutoff = self._clock.now() - timedelta(seconds=self.min_age)
-        stuck: set[tuple[str, str]] = set()
-        blocked: set[tuple[str, str]] = set()
+        stuck: dict[tuple[str, str], Outcome] = {}
         async with self._store.transaction() as tx:
             rows = await tx.claim_unsent(cutoff, self.batch, channels=set(self._adapters))
             sent = []
@@ -64,14 +63,15 @@ class Sweeper:
                 if outcome is Outcome.SENT:
                     sent.append(row.id)
                 else:
-                    stuck.add(who)
-                    if outcome is Outcome.BLOCKED:
-                        blocked.add(who)
+                    stuck[who] = outcome
             if sent:
                 await tx.mark_sent(sent)
         # After the commit: dropping the replies here would wait on our own row locks.
-        for channel, user in blocked:
-            await block(self._engine, channel, user)
+        for (channel, user), outcome in stuck.items():
+            if outcome is Outcome.BLOCKED:
+                await block(self._engine, channel, user)
+            elif outcome is Outcome.REJECTED:  # else they head every batch forever
+                await self._engine.drop_unsent(channel, user)
         return len(sent)
 
     async def run(self) -> None:

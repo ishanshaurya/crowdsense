@@ -51,6 +51,10 @@ class Blocked(SendError):
     """The fan blocked the bot; opt the identity out (#93)."""
 
 
+class Rejected(SendError):
+    """The channel refused the message for good (Telegram 400); retrying cannot help."""
+
+
 class Adapter(Protocol):
     channel: str
     capabilities: Capabilities

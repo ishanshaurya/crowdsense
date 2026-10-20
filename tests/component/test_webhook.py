@@ -258,6 +258,27 @@ async def test_p2_c13_sweeper_that_hits_a_block_drops_the_rest_after_its_commit(
     assert await rig.store.replies() == []
 
 
+async def test_a_refused_reply_is_dropped_and_the_fan_stays_opted_in(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(400, "Bad Request: chat not found")]
+    await start(rig)
+    assert await rig.store.replies() == []
+    assert [i.opted_out for i in await rig.store.identities()] == [False]
+    rig.clock.advance(timedelta(seconds=60))
+    assert await rig.sweeper.sweep_once() == 0
+    await rig.post(text_update("hello"))
+    assert [r.status for r in await rig.store.replies()] == ["sent"]
+
+
+async def test_sweeper_drops_a_refused_reply_so_it_never_heads_the_batch_again(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(500, "down"), error(400, "Bad Request")]
+    await start(rig)
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 0
+    assert await rig.store.replies() == []
+    assert [i.opted_out for i in await rig.store.identities()] == [False]
+    assert len(rig.telegram.sent()) == 2  # no third try
+
+
 @decision(91, 92)
 async def test_p2_c17_stale_tap_on_an_old_or_never_confirmed_message_says_passed(rig: Rig) -> None:
     fan = await start(rig)

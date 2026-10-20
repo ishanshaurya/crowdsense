@@ -115,6 +115,12 @@ class Engine:
             await tx.set_opted_out(channel, external_user_id, True)
             return await tx.drop_unsent(channel, external_user_id)
 
+    async def drop_unsent(self, channel: str, external_user_id: str) -> int:
+        """The channel refused a message for good: drop the identity's unsent replies, which
+        would fail the same way. The fan stays opted in; their next message is answered."""
+        async with self._store.transaction() as tx:
+            return await tx.drop_unsent(channel, external_user_id)
+
 
 def _state_of(identity: IdentityRow, fan: FanRow, session: SessionRow) -> FanState:
     return FanState(
