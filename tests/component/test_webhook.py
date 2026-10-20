@@ -216,20 +216,36 @@ async def test_noop_button_is_answered_and_never_reaches_the_engine(rig: Rig) ->
     assert len(await rig.store.events()) == events_before
 
 
+@decision(69, 72)
+async def test_p2_c12_rate_limit_on_a_turn_leaves_the_reply_to_the_sweeper(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(429, "Too Many Requests", retry_after=15)]
+    await start(rig)
+    assert rig.sleeps == []  # a 15 s wait here would outlast the sweeper's 10 s cutoff
+    assert [r.status for r in await rig.store.replies()] == ["unsent"]
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 1
+    assert len(rig.telegram.sent()) == 2  # the 429, then one resend: never twice
+
+
 @decision(69, 93)
-async def test_p2_c12_rate_limit_waits_retry_after_then_resends(rig: Rig) -> None:
+async def test_p2_c12_sweeper_waits_retry_after_then_resends(rig: Rig) -> None:
     statuses: list[list[str]] = []
 
     async def snapshot() -> None:
         statuses.append([r.status for r in await rig.store.replies()])
 
     rig.on_sleep = snapshot
-    rig.telegram.script["sendMessage"] = [error(429, "Too Many Requests", retry_after=7)]
+    rig.telegram.script["sendMessage"] = [
+        error(500, "down"),
+        error(429, "Too Many Requests", retry_after=7),
+    ]
     await start(rig)
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 1
     assert rig.sleeps and min(rig.sleeps) >= 7
     assert statuses == [["unsent"]]  # still unsent while waiting
     assert [r.status for r in await rig.store.replies()] == ["sent"]
-    assert len(rig.telegram.sent()) == 2
+    assert len(rig.telegram.sent()) == 3
 
 
 @decision(93)

@@ -72,6 +72,7 @@ async def test_q12_secret_header_is_required_and_no_secret_reaches_the_logs(
     fan = Fan(rig)
     assert await rig.post({"update_id": 1}, headers={"X-Telegram-Bot-Api-Secret-Token": "x"}) == 401
     await fan.say("/start ig_story")
+    await fan.say("/start")  # the 429: left for the sweeper, so no buttons yet
     await fan.say("/start")
     await fan.tap("Count me in")
     await rig.sweeper.sweep_once()
