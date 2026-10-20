@@ -91,7 +91,7 @@ class Sender:
             except Blocked:
                 return Outcome.BLOCKED
             except Rejected as exc:
-                log.warning("%s refused the message, replies dropped: %s", adapter.channel, exc)
+                log.warning("%s refused the message: %s", adapter.channel, exc)
                 return Outcome.REJECTED
             except SendError as exc:
                 log.warning("%s send failed, left for the sweeper: %s", adapter.channel, exc)
