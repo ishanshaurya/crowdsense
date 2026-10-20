@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from adapters.base import Blocked, Capabilities, Inbound, RetryAfter, SendError, Tap
+from adapters.base import Blocked, Capabilities, Inbound, Rejected, RetryAfter, SendError, Tap
 from core.types import EventKind, InboundEvent, Option, Reply
 
 CHANNEL = "telegram"
@@ -173,6 +173,8 @@ class TelegramAdapter:
             raise RetryAfter(float(retry))
         if response.status_code == 403:
             raise Blocked(f"{method}: {data.get('description', 'forbidden')}")
+        if response.status_code == 400:
+            raise Rejected(f"{method}: {data.get('description', 'bad request')}")
         if not data.get("ok"):
             raise SendError(f"{method}: {response.status_code} {data.get('description', '')}")
         return data.get("result")

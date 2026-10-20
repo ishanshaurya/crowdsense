@@ -63,6 +63,7 @@ class Engine:
         clock: Clock,
         *,
         artist_name: str,
+        # Keep equal to the channels announcement_audience() reaches (migration 0004).
         push_channels: frozenset[str] = frozenset({"telegram"}),
         simulated: bool = False,
     ) -> None:
@@ -113,6 +114,12 @@ class Engine:
         """
         async with self._store.transaction() as tx:
             await tx.set_opted_out(channel, external_user_id, True)
+            return await tx.drop_unsent(channel, external_user_id)
+
+    async def drop_unsent(self, channel: str, external_user_id: str) -> int:
+        """The channel refused a message for good: drop the identity's unsent replies, which
+        would fail the same way. The fan stays opted in; their next message is answered."""
+        async with self._store.transaction() as tx:
             return await tx.drop_unsent(channel, external_user_id)
 
 

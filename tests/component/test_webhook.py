@@ -12,7 +12,7 @@ import pytest
 from adapters.telegram import SECRET_HEADER
 from core import engine as engine_module
 from core.clock import ScriptedClock
-from core.flow import APOLOGY_TEXT, STALE_TEXT, STEP_BY_ID
+from core.flow import APOLOGY_TEXT, CONSENT_TEXT, INVALID_CHOICE_TEXT, STALE_TEXT, STEP_BY_ID
 from core.store import Store
 from tests.component.telegram_fake import (
     CHAT,
@@ -26,7 +26,7 @@ from tests.component.telegram_fake import (
     unhandled,
 )
 from tests.scenario_runner import check_final_db
-from tests.support import decision, load_yaml
+from tests.support import ARTIST, decision, load_yaml
 
 
 @pytest.fixture
@@ -138,6 +138,22 @@ async def test_p2_c08_sweeper_leaves_fresh_unsent_replies_alone(rig: Rig) -> Non
     assert len(rig.telegram.sent()) == 1
 
 
+@decision(72)
+async def test_sweeper_keeps_a_fans_replies_in_order_when_one_fails(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(500, "down"), error(500, "down")]
+    await start(rig)
+    await rig.post(text_update("hello"))  # consent re-asked: a second unsent reply
+    assert [r.status for r in await rig.store.replies()] == ["unsent", "unsent"]
+    rig.clock.advance(timedelta(seconds=11))
+    rig.telegram.script["sendMessage"] = [error(500, "down")]
+    sent_before = len(rig.telegram.sent())
+    assert await rig.sweeper.sweep_once() == 0  # first failed, so the second waits
+    assert len(rig.telegram.sent()) == sent_before + 1
+    assert await rig.sweeper.sweep_once() == 2
+    texts = [p["text"] for p in rig.telegram.sent()[-2:]]
+    assert texts == [CONSENT_TEXT.format(artist=ARTIST), INVALID_CHOICE_TEXT]
+
+
 @decision(91, 92)
 async def test_p2_c09_double_tap_applies_the_first_and_ignores_the_second(rig: Rig) -> None:
     fan = await start(rig)
@@ -200,20 +216,36 @@ async def test_noop_button_is_answered_and_never_reaches_the_engine(rig: Rig) ->
     assert len(await rig.store.events()) == events_before
 
 
+@decision(69, 72)
+async def test_p2_c12_rate_limit_on_a_turn_leaves_the_reply_to_the_sweeper(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(429, "Too Many Requests", retry_after=15)]
+    await start(rig)
+    assert rig.sleeps == []  # a 15 s wait here would outlast the sweeper's 10 s cutoff
+    assert [r.status for r in await rig.store.replies()] == ["unsent"]
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 1
+    assert len(rig.telegram.sent()) == 2  # the 429, then one resend: never twice
+
+
 @decision(69, 93)
-async def test_p2_c12_rate_limit_waits_retry_after_then_resends(rig: Rig) -> None:
+async def test_p2_c12_sweeper_waits_retry_after_then_resends(rig: Rig) -> None:
     statuses: list[list[str]] = []
 
     async def snapshot() -> None:
         statuses.append([r.status for r in await rig.store.replies()])
 
     rig.on_sleep = snapshot
-    rig.telegram.script["sendMessage"] = [error(429, "Too Many Requests", retry_after=7)]
+    rig.telegram.script["sendMessage"] = [
+        error(500, "down"),
+        error(429, "Too Many Requests", retry_after=7),
+    ]
     await start(rig)
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 1
     assert rig.sleeps and min(rig.sleeps) >= 7
     assert statuses == [["unsent"]]  # still unsent while waiting
     assert [r.status for r in await rig.store.replies()] == ["sent"]
-    assert len(rig.telegram.sent()) == 2
+    assert len(rig.telegram.sent()) == 3
 
 
 @decision(93)
@@ -240,6 +272,27 @@ async def test_p2_c13_sweeper_that_hits_a_block_drops_the_rest_after_its_commit(
     assert await rig.sweeper.sweep_once() == 0  # finishes: no wait on its own row locks
     assert [i.opted_out for i in await rig.store.identities()] == [True]
     assert await rig.store.replies() == []
+
+
+async def test_a_refused_reply_is_dropped_and_the_fan_stays_opted_in(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(400, "Bad Request: chat not found")]
+    await start(rig)
+    assert await rig.store.replies() == []
+    assert [i.opted_out for i in await rig.store.identities()] == [False]
+    rig.clock.advance(timedelta(seconds=60))
+    assert await rig.sweeper.sweep_once() == 0
+    await rig.post(text_update("hello"))
+    assert [r.status for r in await rig.store.replies()] == ["sent"]
+
+
+async def test_sweeper_drops_a_refused_reply_so_it_never_heads_the_batch_again(rig: Rig) -> None:
+    rig.telegram.script["sendMessage"] = [error(500, "down"), error(400, "Bad Request")]
+    await start(rig)
+    rig.clock.advance(timedelta(seconds=11))
+    assert await rig.sweeper.sweep_once() == 0
+    assert await rig.store.replies() == []
+    assert [i.opted_out for i in await rig.store.identities()] == [False]
+    assert len(rig.telegram.sent()) == 2  # no third try
 
 
 @decision(91, 92)

@@ -1,7 +1,9 @@
 """Sending replies with Telegram's limits and failure rules (#69, #93).
 
-429 -> wait `retry_after`, then resend (the reply stays unsent meanwhile). 403 -> the fan blocked
-the bot. Anything else -> give up for now; the sweeper resends unsent replies later (#72).
+429 -> wait `retry_after`, then resend (the reply stays unsent meanwhile); a turn's own delivery
+does not wait and leaves the reply to the sweeper, so the two never both send it. 403 -> the
+fan blocked the bot. 400 -> refused for good: the fan's unsent replies are dropped, no opt-out.
+Anything else -> give up for now; the sweeper resends unsent replies later (#72).
 """
 
 import asyncio
@@ -10,7 +12,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable, Sequence
 
-from adapters.base import Adapter, Blocked, RetryAfter, SendError
+from adapters.base import Adapter, Blocked, Rejected, RetryAfter, SendError
 from core.engine import Engine, Outgoing
 from core.types import Reply
 
@@ -22,6 +24,7 @@ Sleep = Callable[[float], Awaitable[None]]
 class Outcome(enum.Enum):
     SENT = "sent"
     BLOCKED = "blocked"
+    REJECTED = "rejected"
     FAILED = "failed"
 
 
@@ -66,13 +69,18 @@ class Sender:
         self._sleep = sleep
         self._attempts = attempts
 
-    async def send(self, adapter: Adapter, user: str, reply: Reply) -> Outcome:
-        """One reply, with 429 waits. Does not touch the database."""
+    async def send(
+        self, adapter: Adapter, user: str, reply: Reply, *, wait: bool = True
+    ) -> Outcome:
+        """One reply, with 429 waits unless `wait` is False. Does not touch the database."""
         for attempt in range(1, self._attempts + 1):
             await self._pacer.wait(user)
             try:
                 await adapter.send(user, reply)
             except RetryAfter as exc:
+                if not wait:
+                    log.warning("%s rate limited, left for the sweeper", adapter.channel)
+                    return Outcome.FAILED
                 log.warning(
                     "%s rate limited, waiting %.0fs (attempt %d)",
                     adapter.channel,
@@ -82,6 +90,9 @@ class Sender:
                 await self._sleep(exc.seconds)
             except Blocked:
                 return Outcome.BLOCKED
+            except Rejected as exc:
+                log.warning("%s refused the message: %s", adapter.channel, exc)
+                return Outcome.REJECTED
             except SendError as exc:
                 log.warning("%s send failed, left for the sweeper: %s", adapter.channel, exc)
                 return Outcome.FAILED
@@ -93,9 +104,12 @@ class Sender:
         """Send a turn's replies in order and mark each one sent (#86). Never raises."""
         try:
             for out in replies:
-                outcome = await self.send(adapter, user, out.reply)
+                # No 429 wait here: past the sweeper's 10 s age cutoff both would send it.
+                outcome = await self.send(adapter, user, out.reply, wait=False)
                 if outcome is Outcome.BLOCKED:
                     await block(self._engine, adapter.channel, user)
+                elif outcome is Outcome.REJECTED:
+                    await self._engine.drop_unsent(adapter.channel, user)
                 if outcome is not Outcome.SENT:
                     return  # the rest stay unsent, in order, for the sweeper
                 await self._engine.mark_sent([out])

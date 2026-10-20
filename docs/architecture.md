@@ -60,7 +60,7 @@ adapters/
 api/
   webhooks.py       /hook/{channel}: parse -> engine -> 200, then send replies
   chat.py           web chat routes: serves /chat page, handles /chat/message
-  sender.py         sends replies under Telegram limits (429 wait, 403 opt-out)
+  sender.py         sends replies under Telegram limits (429 wait, 403 opt-out, 400 drop)
   sweeper.py        every 30 s resends replies still unsent after 10 s
   taps.py           tells a double tap from a tap on an old question
   ratelimit.py      per-IP token bucket for the public web chat
@@ -162,7 +162,8 @@ Every social app talks to the same engine. An adapter only translates the app's 
 | Engine error               | A bug in our code during a turn                              | Turn rolled back, fan gets "Something went wrong, please tap again", error logged (#71) |
 | Database down              | Supabase unreachable or paused                               | Webhook returns 5xx, so Telegram retries later                         |
 | Send fails                 | Telegram or network error while sending a reply              | Reply stays `unsent`, resend sweeper sends it within about 40 s (#72)  |
-| 429 Too Many Requests      | We hit Telegram's rate limit                                 | Wait the `retry_after` time, then resend (#69)                         |
+| 429 Too Many Requests      | We hit Telegram's rate limit                                 | The turn leaves the reply `unsent`; the sweeper waits `retry_after`, then resends, so it is never sent twice (#69, changed 2026-10-20) |
+| 400 Bad Request            | Telegram refused the message for good (e.g. chat not found)  | That fan's unsent replies deleted, so they are not retried forever; fan stays subscribed |
 | 403 Forbidden              | Fan blocked the bot                                          | Fan marked opted out, their unsent replies deleted (#93)               |
 | Reply sent twice           | Crash after Telegram accepted the reply, before it was marked `sent` | Accepted: one duplicate is better than a lost reply (#72)      |
 

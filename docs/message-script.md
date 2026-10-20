@@ -70,8 +70,12 @@ What the fan sees and what the system does when messaging goes wrong.
   - Decision: #72
 - **Telegram says "too many requests" (429)**
   - Fan sees: Reply slightly delayed
-  - System does: Wait `retry_after` seconds, then resend
-  - Decision: #69, #93
+  - System does: The turn leaves the reply unsent; the sweeper waits `retry_after` seconds, then resends it once
+  - Decision: #69 (changed 2026-10-20), #93
+- **Telegram refuses the message (400, e.g. chat not found)**
+  - Fan sees: —
+  - System does: Delete that fan's unsent replies so they are not retried forever; the fan stays subscribed and their next message is answered
+  - Decision: audit fix 2026-10-20
 - **Fan has blocked the bot (403)**
   - Fan sees: —
   - System does: Mark the identity opted out and delete that fan's pending unsent replies (one transaction); stop sending
