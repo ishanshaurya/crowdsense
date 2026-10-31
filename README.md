@@ -7,7 +7,7 @@
 
 Proof of concept: a simulated artist, about 20,000 simulated fans and about 10 real testers.
 
-**Try it live:** [Telegram bot](https://t.me/crowdsense_live_bot) · [Web chat](https://crowdsense-production.up.railway.app/chat) · [Artist dashboard](https://positive-delight-production.up.railway.app) (password on request)
+**Status: archived.** The project is complete and the hosted demo (Telegram bot, web chat, Railway services, Supabase database) has been shut down. The code and docs stay here as a reference. The demo video below shows the finished system.
 
 ## Demo
 
@@ -46,8 +46,8 @@ class Adapter(Protocol):
 
 | Channel | Status | Needs |
 | --- | --- | --- |
-| Telegram | Live | Bot token |
-| Web chat | Live (second adapter on the same engine, no core change) | None |
+| Telegram | Built | Bot token |
+| Web chat | Built (second adapter on the same engine, no core change) | None |
 | Discord | Planned | Bot token |
 | WhatsApp | Planned | Meta business verification, message templates |
 | Instagram | Planned | Meta app review |
